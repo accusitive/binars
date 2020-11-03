@@ -1,4 +1,1 @@
-#binars
-Binars is a rust interface for using Binaryen.
-
-
+![CI](https://github.com/accusitive/binars/workflows/CI/badge.svg)
