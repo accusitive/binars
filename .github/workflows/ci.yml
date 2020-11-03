@@ -22,6 +22,19 @@ jobs:
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: ${{ matrix.rust }}
+      - name: install ninja (linux)
+        run: sudo apt-get install ninja-build
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: install ninja (macos)
+        run: brew install ninja
+        if: matrix.os == 'macos-latest'
+
+      - name: install ninja (win)
+        run: choco install ninja
+        if: matrix.os == 'windows-latest'
+
+        
       # You may want to test other featuresets here...
       - run: cargo test --verbose --workspace --all-features
       - run: cargo test --verbose --workspace --no-default-features
@@ -50,6 +63,20 @@ jobs:
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1.1.0
+      
+        
+      - name: install ninja (linux)
+        run: sudo apt-get install ninja-build
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: install ninja (macos)
+        run: brew install ninja
+        if: matrix.os == 'macos-latest'
+
+      - name: install ninja (win)
+        run: choco install ninja
+        if: matrix.os == 'windows-latest'
+
 
       - run: cargo test --verbose --workspace --all-features
       - run: cargo test --verbose --workspace --no-default-features
