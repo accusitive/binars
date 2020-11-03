@@ -9,57 +9,75 @@ use std::{convert::TryInto, ffi::CString};
 #[macro_use]
 extern crate lazy_static;
 
-pub struct Literal {
+pub struct Literal
+{
     inner: BinaryenLiteral,
 }
-impl Literal {
-    pub fn new(l: BinaryenLiteral) -> Self {
+impl Literal
+{
+    pub fn new(l: BinaryenLiteral) -> Self
+    {
         Self { inner: l }
     }
-
-    pub fn int_32(x: i32) -> Literal {
+    /// A 32 bit literal integer
+    pub fn int_32(x: i32) -> Literal
+    {
         unsafe { Self::new(BinaryenLiteralInt32(x)) }
     }
-    pub fn int_64(x: i64) -> Literal {
+    /// A 64 bit literal integer
+
+    pub fn int_64(x: i64) -> Literal
+    {
         unsafe { Self::new(BinaryenLiteralInt64(x)) }
     }
-    pub fn float_32(x: f32) -> Literal {
+    /// A 32 bit literal float
+
+    pub fn float_32(x: f32) -> Literal
+    {
         unsafe { Self::new(BinaryenLiteralFloat32(x)) }
     }
-    pub fn float_64(x: f64) -> Literal {
+    /// A 64 bit literal integer
+
+    pub fn float_64(x: f64) -> Literal
+    {
         unsafe { Self::new(BinaryenLiteralFloat64(x)) }
     }
-
-    pub fn float_32_bits(x: i32) -> Literal {
+    /// Creates a 32 bit float from 32 (non-float) bits
+    pub fn float_32_bits(x: i32) -> Literal
+    {
         unsafe { Self::new(BinaryenLiteralFloat32Bits(x)) }
     }
-    pub fn float_64_bits(x: i64) -> Literal {
+        /// Creates a 64 bit float from 64 (non-float) bits
+
+    pub fn float_64_bits(x: i64) -> Literal
+    {
         unsafe { Self::new(BinaryenLiteralFloat64Bits(x)) }
     }
 }
+/// An operation. Typically either Binary, or Unary.
+/// Binary operations take 2 children, and return one result,
+/// while Unary operations take 1 child, and return one result.
 #[derive(Debug)]
-pub struct Op {
+pub struct Op
+{
     inner: BinaryenOp,
 }
+/// A macro to quickly generate Binary operations code.
 macro_rules! binop {
     ($name: ident, $full: ident) => {
-        pub fn $name() -> Op {
+        /// Auto generated binary operation. Takes 2 parents, and returns one child.
+        pub fn $name() -> Op
+        {
             unsafe { Op::new($full()) }
         }
     };
 }
-impl Op {
-    pub fn new(op: BinaryenOp) -> Self {
-Self { inner: op }
+impl Op
+{
+    pub fn new(op: BinaryenOp) -> Self
+    {
+        Self { inner: op }
     }
-    // Potentially use macros for this?
-
-    // binop!(sqrt_float_32, BinaryenSqrtFloat32);
-    // binop!(clz_int_32, BinaryenClzInt32);
-    // binop!(ctz_int_32, BinaryenCtzInt32);
-    // binop!(pop_cnt_int_i32, BinaryenPopcntInt32);
-    // binop!(neg_float_int_32, BinaryenNegFloat32);
-
     binop!(clz_int32, BinaryenClzInt32);
     binop!(ctz_int32, BinaryenCtzInt32);
     binop!(popcnt_int32, BinaryenPopcntInt32);
@@ -504,55 +522,86 @@ Self { inner: op }
     binop!(swizzle_vec8x16, BinaryenSwizzleVec8x16);
 }
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub struct ExpressionRef {
+/// An expression, Nearly everything is an expression. Expressions can be chained, making this a very useful datatype.
+pub struct ExpressionRef
+{
     inner: BinaryenExpressionRef,
 }
-impl ExpressionRef {
-    pub fn new(expr: BinaryenExpressionRef) -> Self {
-ExpressionRef { inner: expr }
+impl ExpressionRef
+{
+    /// Crate a new ExpressionRef from an internal BinaryenExpressionRef.
+    pub fn new(expr: BinaryenExpressionRef) -> Self
+    {
+        ExpressionRef { inner: expr }
     }
-    pub fn null_expr() -> ExpressionRef {
+
+    /// Create a null expressionref.
+    pub fn null_expr() -> ExpressionRef
+    {
         Self::new(std::ptr::null_mut::<BinaryenExpression>())
     }
-    pub fn print(&self) {
+    /// Print the WAT code for the expression ref.
+    pub fn print(&self)
+    {
         unsafe { BinaryenExpressionPrint(self.inner) }
     }
 }
 #[derive(Debug)]
-pub struct Export {
+/// A WASM export.
+pub struct Export
+{
     inner: *mut BinaryenExport,
 }
-impl Export {
-    fn new(expr: *mut BinaryenExport) -> Self {
-Self { inner: expr }
+impl Export
+{
+    /// Create a mew export from an internal BinaryenExport
+    fn new(expr: *mut BinaryenExport) -> Self
+    {
+        Self { inner: expr }
     }
 }
+// Allow to be sent over thread
 unsafe impl Send for Export {}
 unsafe impl Sync for Export {}
+/// The main `Module` struct. 
+/// This struct is the base for nearly everything.
+//TODO: Document this better (with examples?)
 #[derive(Debug)]
-pub struct Module {
+pub struct Module
+{
     inner: BinaryenModuleRef,
 }
 unsafe impl Send for Module {}
 unsafe impl Sync for Module {}
-impl Module {
-    pub fn new() -> Self {
+impl Module
+{
+    /// Create a `Module` from an internal BinaryenModuleRef.
+    pub fn new() -> Self
+    {
         return unsafe {
             Self {
                 inner: BinaryenModuleCreate(),
             }
         };
     }
-    pub fn print(&mut self) {
+    /// Print the WAT to the current `Module`.
+    pub fn print(&mut self)
+    {
         unsafe { BinaryenModulePrint(self.inner) }
     }
-    pub fn print_wat(&mut self) {
+    /// Alias to `Module#print`.
+    pub fn print_wat(&mut self)
+    {
         unsafe { BinaryenModulePrint(self.inner) }
     }
-    pub fn print_asmjs(&mut self) {
+    /// Print the current Module as ASM.js code.
+    pub fn print_asmjs(&mut self)
+    {
         unsafe { BinaryenModulePrintAsmjs(self.inner) }
     }
-    pub fn get_local(&mut self, index: i32, dype: Type) -> ExpressionRef {
+    /// Get a reference to a local variable.
+    pub fn get_local(&mut self, index: i32, dype: Type) -> ExpressionRef
+    {
         unsafe {
             ExpressionRef::new(BinaryenLocalGet(
                 self.inner,
@@ -561,7 +610,9 @@ impl Module {
             ))
         }
     }
-    pub fn set_local(&mut self, index: i32, value: ExpressionRef) -> ExpressionRef {
+    /// Set a local variable by index.
+    pub fn set_local(&mut self, index: i32, value: ExpressionRef) -> ExpressionRef
+    {
         unsafe {
             ExpressionRef::new(BinaryenLocalSet(
                 self.inner,
@@ -570,10 +621,9 @@ impl Module {
             ))
         }
     }
-    /*
-    Create new binary operation
-    */
-    pub fn binary(&mut self, op: Op, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef {
+    /// Get a reference to a binary expression.
+    pub fn binary(&mut self, op: Op, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef
+    {
         return unsafe {
             ExpressionRef::new(BinaryenBinary(
                 self.inner,
@@ -583,7 +633,7 @@ impl Module {
             ))
         };
     }
-
+    /// Add a function to the module.
     pub fn add_function(
         &mut self,
         name: &str,
@@ -591,7 +641,8 @@ impl Module {
         results: Type,
         var_types: Vec<Type>,
         body: ExpressionRef,
-    ) -> FunctionRef {
+    ) -> FunctionRef
+    {
         let mut inners = var_types
             .iter()
             .map(|t| t.inner)
@@ -610,33 +661,38 @@ impl Module {
         })
     }
     /// Bool whether the validation was successful
-    pub fn validate(&mut self) -> bool {
-unsafe { BinaryenModuleValidate(self.inner) == 1 }
+    pub fn validate(&mut self) -> bool
+    {
+        unsafe { BinaryenModuleValidate(self.inner) == 1 }
     }
     /// Incase you want to have the raw validation number.
-    pub fn validate_i(&mut self) -> i32 {
-unsafe { BinaryenModuleValidate(self.inner) }
+    pub fn validate_i(&mut self) -> i32
+    {
+        unsafe { BinaryenModuleValidate(self.inner) }
     }
-    /// Optimise
-    pub fn optimize(&mut self) {
+    /// Optimise the current module.
+    pub fn optimize(&mut self)
+    {
         unsafe { BinaryenModuleOptimize(self.inner) }
     }
     #[doc = "Get current optimization level, set new optimization `level`, optimize, set back to original optimization level."]
-    pub fn optimize_with_level(&mut self, level: i32) {
+    pub fn optimize_with_level(&mut self, level: i32)
+    {
         let current_level = unsafe { BinaryenGetOptimizeLevel() };
         unsafe { BinaryenSetOptimizeLevel(level) }
         unsafe { BinaryenModuleOptimize(self.inner) }
         unsafe { BinaryenSetOptimizeLevel(current_level) }
     }
-    pub fn make_const(&mut self, value: Literal) -> ExpressionRef {
+    /// Make a constant from the literal.
+    // Maybe add an alias to avoid using `Literal` here? 
+    pub fn make_const(&mut self, value: Literal) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenConst(self.inner, value.inner) })
     }
-
-    pub fn new_nameless_block(
-        &mut self,
-        children: Vec<ExpressionRef>,
-        type_: Type,
-    ) -> ExpressionRef {
+    /// Creates an anonymous block.
+    pub fn new_nameless_block(&mut self, children: Vec<ExpressionRef>, type_: Type)
+        -> ExpressionRef
+    {
         let mut inners = children
             .iter()
             .map(|t| t.inner)
@@ -651,13 +707,14 @@ unsafe { BinaryenModuleValidate(self.inner) }
             )
         })
     }
-
+    /// Creates a named block.
     pub fn new_block(
         &mut self,
         name: &str,
         children: Vec<ExpressionRef>,
         type_: Type,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         let mut inners = children
             .iter()
             .map(|t| t.inner)
@@ -672,7 +729,9 @@ unsafe { BinaryenModuleValidate(self.inner) }
             )
         })
     }
-    pub fn add_export(&mut self, internal_name: &str, external_name: &str) -> Export {
+    /// Add an export to the module
+    pub fn add_export(&mut self, internal_name: &str, external_name: &str) -> Export
+    {
         let c_internal_name = CString::new(internal_name.to_string()).unwrap();
         let c_external_name = CString::new(external_name.to_string()).unwrap();
         return Export::new(unsafe {
@@ -683,7 +742,9 @@ unsafe { BinaryenModuleValidate(self.inner) }
             )
         });
     }
-    pub fn add_function_export(&mut self, internal_name: &str, external_name: &str) -> Export {
+    /// Add an export to a function in the module.
+    pub fn add_function_export(&mut self, internal_name: &str, external_name: &str) -> Export
+    {
         let c_internal_name = CString::new(internal_name).unwrap();
         let c_external_name = CString::new(external_name).unwrap();
 
@@ -695,7 +756,9 @@ unsafe { BinaryenModuleValidate(self.inner) }
             )
         });
     }
-    pub fn add_table_export(&mut self, internal_name: &str, external_name: &str) -> Export {
+    /// Add an export to a table
+    pub fn add_table_export(&mut self, internal_name: &str, external_name: &str) -> Export
+    {
         let c_internal_name = CString::new(internal_name).unwrap().as_ptr();
         let c_external_name = CString::new(external_name).unwrap().as_ptr();
 
@@ -703,7 +766,9 @@ unsafe { BinaryenModuleValidate(self.inner) }
             BinaryenAddTableExport(self.inner, c_internal_name, c_external_name)
         });
     }
-    pub fn add_memory_export(&mut self, internal_name: &str, external_name: &str) -> Export {
+    /// Add an export to a memory.
+    pub fn add_memory_export(&mut self, internal_name: &str, external_name: &str) -> Export
+    {
         let c_internal_name = CString::new(internal_name).unwrap().as_ptr();
         let c_external_name = CString::new(external_name).unwrap().as_ptr();
 
@@ -729,7 +794,9 @@ unsafe { BinaryenModuleValidate(self.inner) }
     //     println!("{:?}", c);
     //     // std::fs::write(filename, c.to_string_lossy().to_string()).unwrap();
     // }
-    pub fn write_text(&mut self, filename: &str) {
+    /// TOOD: Broken needs fixed dont use
+    pub fn write_text(&mut self, filename: &str)
+    {
         let c = unsafe {
             let was_color_originally_enabled = BinaryenAreColorsEnabled();
             BinaryenSetColorsEnabled(0);
@@ -740,7 +807,10 @@ unsafe { BinaryenModuleValidate(self.inner) }
         };
         std::fs::write(filename, c.to_string_lossy().to_string()).unwrap();
     }
-    pub fn compile(&mut self) -> &str {
+        ///TOOD: Broken needs fixed dont use
+
+    pub fn compile(&mut self) -> &str
+    {
         let c = unsafe {
             let _was_color_originally_enabled = BinaryenAreColorsEnabled();
             let c = BinaryenModuleAllocateAndWrite(self.inner, std::ptr::null());
@@ -756,7 +826,10 @@ unsafe { BinaryenModuleValidate(self.inner) }
 
         // c
     }
-    pub fn compile_text(&mut self) -> String {
+        ///TOOD: Broken needs fixed dont use
+
+    pub fn compile_text(&mut self) -> String
+    {
         let c = unsafe {
             let was_color_originally_enabled = BinaryenAreColorsEnabled();
             BinaryenSetColorsEnabled(0);
@@ -768,20 +841,25 @@ unsafe { BinaryenModuleValidate(self.inner) }
         c.to_string_lossy().to_string()
         // std::fs::write(filename, c.to_string_lossy().to_string()).unwrap();
     }
-    pub fn unary(&mut self, op: Op, value: ExpressionRef) -> ExpressionRef {
+    /// Create an unary expression from an Operation.
+    pub fn unary(&mut self, op: Op, value: ExpressionRef) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenUnary(self.inner, op.inner, value.inner) })
     }
     /// Cant use `module.drop()` because thats taken up by `impl Drop`.
-    pub fn drop_var(&mut self, var: ExpressionRef) -> ExpressionRef {
+    pub fn drop_var(&mut self, var: ExpressionRef) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenDrop(self.inner, var.inner) })
     }
+    /// Initialize some memory.
     pub fn memory_init(
         &mut self,
         segment: i32,
         dest: ExpressionRef,
         offset: ExpressionRef,
         size: ExpressionRef,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenMemoryInit(
                 self.inner,
@@ -792,12 +870,14 @@ unsafe { BinaryenModuleValidate(self.inner) }
             )
         })
     }
+    /// Copy some memory.
     pub fn memory_copy(
         &mut self,
         dest: ExpressionRef,
         source: ExpressionRef,
         size: ExpressionRef,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenMemoryCopy(self.inner, dest.inner, source.inner, size.inner)
         })
@@ -807,34 +887,35 @@ unsafe { BinaryenModuleValidate(self.inner) }
         dest: ExpressionRef,
         value: ExpressionRef,
         size: ExpressionRef,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenMemoryFill(self.inner, dest.inner, value.inner, size.inner)
         })
     }
-    pub fn data_drop(&mut self, segment: i32) -> ExpressionRef {
+    pub fn data_drop(&mut self, segment: i32) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenDataDrop(self.inner, segment.try_into().unwrap()) })
     }
-    pub fn ref_null(&mut self, type_: Type) -> ExpressionRef {
+    pub fn ref_null(&mut self, type_: Type) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenRefNull(self.inner, type_.inner) })
     }
 
-    pub fn ref_func(&mut self, rfunc: &str) -> ExpressionRef {
+    pub fn ref_func(&mut self, rfunc: &str) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             let cfunc = CString::new(rfunc).unwrap();
             BinaryenRefFunc(self.inner, cfunc.as_ptr())
         })
     }
-    pub fn make_i31(&mut self, value: ExpressionRef) -> ExpressionRef {
+    pub fn make_i31(&mut self, value: ExpressionRef) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenI31New(self.inner, value.inner) })
     }
-    pub fn add_event(
-        &mut self,
-        name: &str,
-        attribute: i32,
-        params: Type,
-        results: Type,
-    ) -> EventRef {
+    pub fn add_event(&mut self, name: &str, attribute: i32, params: Type, results: Type)
+        -> EventRef
+    {
         EventRef::new(unsafe {
             let cname = CString::new(name).unwrap();
             BinaryenAddEvent(
@@ -846,7 +927,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
             )
         })
     }
-    pub fn throw(&mut self, event: &str, operands: Vec<ExpressionRef>) -> ExpressionRef {
+    pub fn throw(&mut self, event: &str, operands: Vec<ExpressionRef>) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             let mut inners = operands
                 .iter()
@@ -862,10 +944,12 @@ unsafe { BinaryenModuleValidate(self.inner) }
             )
         })
     }
-    pub fn pop(&mut self, type_: Type) -> ExpressionRef {
+    pub fn pop(&mut self, type_: Type) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenPop(self.inner, type_.inner) })
     }
-    pub fn rethrow(&mut self, exnref: ExpressionRef) -> ExpressionRef {
+    pub fn rethrow(&mut self, exnref: ExpressionRef) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenRethrow(self.inner, exnref.inner) })
     }
     pub fn br_on_exn(
@@ -873,7 +957,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         name: &str,
         event_name: &str,
         exnref: ExpressionRef,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             let cname = CString::new(name).unwrap();
             let cevent_name = CString::new(event_name).unwrap();
@@ -890,7 +975,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         condition: ExpressionRef,
         if_true: ExpressionRef,
         if_false: ExpressionRef,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenIf(self.inner, condition.inner, if_true.inner, if_false.inner)
             // match if_false {
@@ -904,7 +990,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
             // }
         })
     }
-    pub fn r#loop(&mut self, ins: &str, body: ExpressionRef) -> ExpressionRef {
+    pub fn r#loop(&mut self, ins: &str, body: ExpressionRef) -> ExpressionRef
+    {
         unsafe {
             ExpressionRef::new(BinaryenLoop(
                 self.inner,
@@ -919,7 +1006,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         name: &str,
         condition: Option<ExpressionRef>,
         value: Option<ExpressionRef>,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             let cins = CString::new(name).unwrap();
             match condition {
@@ -956,7 +1044,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         default_name: &str,
         condition: ExpressionRef,
         value: ExpressionRef,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         let mut cnames = names
             .iter()
             .map(|&n| CString::new(n).unwrap().as_ptr())
@@ -977,7 +1066,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         target: &str,
         operands: Vec<ExpressionRef>,
         return_type: Type,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         let mut inners = operands
             .iter()
             .map(|o| o.inner)
@@ -999,7 +1089,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         operands: Vec<ExpressionRef>,
         params: Type,
         results: Type,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         let mut operands_inners = operands
             .iter()
             .map(|o| o.inner)
@@ -1016,7 +1107,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
             )
         })
     }
-    pub fn tee_local(&mut self, index: i32, value: ExpressionRef, type_: Type) -> ExpressionRef {
+    pub fn tee_local(&mut self, index: i32, value: ExpressionRef, type_: Type) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenLocalTee(self.inner, index as u32, value.inner, type_.inner)
         })
@@ -1029,7 +1121,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         align: i32,
         type_: Type,
         ptr: ExpressionRef,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenLoad(
                 self.inner,
@@ -1050,7 +1143,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         ptr: ExpressionRef,
         value: ExpressionRef,
         type_: Type,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenStore(
                 self.inner,
@@ -1069,7 +1163,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         if_true: ExpressionRef,
         if_false: ExpressionRef,
         type_: Type,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenSelect(
                 self.inner,
@@ -1080,7 +1175,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
             )
         })
     }
-    pub fn r#return(&mut self, value: ExpressionRef) -> ExpressionRef {
+    pub fn r#return(&mut self, value: ExpressionRef) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenReturn(self.inner, value.inner) })
     }
     pub fn return_call(
@@ -1088,7 +1184,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         target: &str,
         operands: Vec<ExpressionRef>,
         return_type: Type,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         let mut operands_inners = operands
             .iter()
             .map(|o| o.inner)
@@ -1110,7 +1207,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         operands: Vec<ExpressionRef>,
         params: Type,
         result_type: Type,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         let mut operands_inners = operands
             .iter()
             .map(|o| o.inner)
@@ -1127,13 +1225,16 @@ unsafe { BinaryenModuleValidate(self.inner) }
             )
         })
     }
-    pub fn ref_is_null(&mut self, value: ExpressionRef) -> ExpressionRef {
+    pub fn ref_is_null(&mut self, value: ExpressionRef) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenRefIsNull(self.inner, value.inner) })
     }
-    pub fn ref_eq(&mut self, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef {
+    pub fn ref_eq(&mut self, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenRefEq(self.inner, left.inner, right.inner) })
     }
-    pub fn r#try(&mut self, body: ExpressionRef, catch: ExpressionRef) -> ExpressionRef {
+    pub fn r#try(&mut self, body: ExpressionRef, catch: ExpressionRef) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenTry(self.inner, body.inner, catch.inner) })
     }
     pub fn atomic_store(
@@ -1143,7 +1244,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         ptr: ExpressionRef,
         value: ExpressionRef,
         type_: Type,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenAtomicStore(
                 self.inner,
@@ -1161,7 +1263,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         offset: i32,
         type_: Type,
         ptr: ExpressionRef,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenAtomicLoad(
                 self.inner,
@@ -1178,7 +1281,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         expected: ExpressionRef,
         timeout: ExpressionRef,
         type_: Type,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenAtomicWait(
                 self.inner,
@@ -1193,15 +1297,18 @@ unsafe { BinaryenModuleValidate(self.inner) }
         &mut self,
         ptr: ExpressionRef,
         notify_count: ExpressionRef,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenAtomicNotify(self.inner, ptr.inner, notify_count.inner)
         })
     }
-    pub fn atomic_fence(&mut self) -> ExpressionRef {
+    pub fn atomic_fence(&mut self) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenAtomicFence(self.inner) })
     }
-    pub fn make_tuple(&mut self, operands: Vec<ExpressionRef>) -> ExpressionRef {
+    pub fn make_tuple(&mut self, operands: Vec<ExpressionRef>) -> ExpressionRef
+    {
         let mut operands_inners = operands
             .iter()
             .map(|o| o.inner)
@@ -1215,27 +1322,34 @@ unsafe { BinaryenModuleValidate(self.inner) }
             )
         })
     }
-    pub fn extract_tuple(&mut self, tuple: ExpressionRef, index: i32) -> ExpressionRef {
+    pub fn extract_tuple(&mut self, tuple: ExpressionRef, index: i32) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             BinaryenTupleExtract(self.inner, tuple.inner, index.try_into().unwrap())
         })
     }
-    pub fn memory_size(&mut self) -> ExpressionRef {
+    pub fn memory_size(&mut self) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenMemorySize(self.inner) })
     }
-    pub fn memory_grow(&mut self, delta: ExpressionRef) -> ExpressionRef {
+    pub fn memory_grow(&mut self, delta: ExpressionRef) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenMemoryGrow(self.inner, delta.inner) })
     }
-    pub fn new_i31(&mut self, value: ExpressionRef) -> ExpressionRef {
+    pub fn new_i31(&mut self, value: ExpressionRef) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenI31New(self.inner, value.inner) })
     }
-    pub fn get_i31(&mut self, i31: ExpressionRef, signed: i32) -> ExpressionRef {
+    pub fn get_i31(&mut self, i31: ExpressionRef, signed: i32) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenI31Get(self.inner, i31.inner, signed) })
     }
-    pub fn nop(&mut self) -> ExpressionRef {
+    pub fn nop(&mut self) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenNop(self.inner) })
     }
-    pub fn unreachable(&mut self) -> ExpressionRef {
+    pub fn unreachable(&mut self) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenUnreachable(self.inner) })
     }
     //TODO: Use bool instead of i8
@@ -1245,7 +1359,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         type_: Type,
         mutable: i8,
         init: ExpressionRef,
-    ) -> GlobalRef {
+    ) -> GlobalRef
+    {
         GlobalRef::new(unsafe {
             let cname = CString::new(name).unwrap();
             BinaryenAddGlobal(self.inner, cname.as_ptr(), type_.inner, mutable, init.inner)
@@ -1258,7 +1373,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         external_base_name: &str,
         params: Type,
         result: Type,
-    ) {
+    )
+    {
         unsafe {
             let c_internal_name = CString::new(internal_name).unwrap();
             let c_external_module_name = CString::new(external_module_name).unwrap();
@@ -1279,7 +1395,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         maximum: u32,
         func_names: Vec<&str>,
         offset: ExpressionRef,
-    ) {
+    )
+    {
         unsafe {
             let mut c_func_names = vec![];
             for n in func_names {
@@ -1313,7 +1430,8 @@ unsafe { BinaryenModuleValidate(self.inner) }
         segment_offsets: Vec<ExpressionRef>,
         mut segment_sizes: Vec<u32>,
         shared: bool,
-    ) {
+    )
+    {
         let mut csegs = vec![];
         for s in segments {
             csegs.push(CString::new(s).unwrap());
@@ -1344,26 +1462,33 @@ unsafe { BinaryenModuleValidate(self.inner) }
             )
         }
     }
-    pub fn set_start(&mut self, start: FunctionRef) {
+    pub fn set_start(&mut self, start: FunctionRef)
+    {
         unsafe { BinaryenSetStart(self.inner, start.inner) }
     }
-    pub fn auto_drop(&mut self) {
+    pub fn auto_drop(&mut self)
+    {
         unsafe { BinaryenModuleAutoDrop(self.inner) }
     }
-    pub fn set_features(&mut self, features: i32) {
+    pub fn set_features(&mut self, features: i32)
+    {
         unsafe { BinaryenModuleSetFeatures(self.inner, features as u32) }
     }
-    pub fn get_features(&mut self) -> Features {
+    pub fn get_features(&mut self) -> Features
+    {
         Features {
             inner: unsafe { BinaryenModuleGetFeatures(self.inner) },
         }
     }
-    pub fn make_relooper(&mut self) -> BRelooperRef {
+    pub fn make_relooper(&mut self) -> BRelooperRef
+    {
         BRelooperRef::new(unsafe { RelooperCreate(self.inner) })
     }
 }
-impl From<&str> for Module {
-    fn from(s: &str) -> Self {
+impl From<&str> for Module
+{
+    fn from(s: &str) -> Self
+    {
         return Module {
             inner: unsafe {
                 let mut c = s
@@ -1377,36 +1502,43 @@ impl From<&str> for Module {
         };
     }
 }
-impl Drop for Module {
-    fn drop(&mut self) {
+impl Drop for Module
+{
+    fn drop(&mut self)
+    {
         unsafe { BinaryenModuleDispose(self.inner) }
     }
 }
-pub struct BLooperBlockRef {
+pub struct BLooperBlockRef
+{
     inner: RelooperBlockRef,
 }
-impl BLooperBlockRef {
-    fn new(rb: RelooperBlockRef) -> Self {
+impl BLooperBlockRef
+{
+    fn new(rb: RelooperBlockRef) -> Self
+    {
         Self { inner: rb }
     }
 }
 //TODO: Find better name for BRelooperRef
-pub struct BRelooperRef {
+pub struct BRelooperRef
+{
     inner: RelooperRef,
 }
-impl BRelooperRef {
-    fn new(r: RelooperRef) -> Self {
+impl BRelooperRef
+{
+    fn new(r: RelooperRef) -> Self
+    {
         Self { inner: r }
     }
-    pub fn add_block(&mut self, code: ExpressionRef) -> BLooperBlockRef {
+    pub fn add_block(&mut self, code: ExpressionRef) -> BLooperBlockRef
+    {
         BLooperBlockRef::new(unsafe { RelooperAddBlock(self.inner, code.inner) })
     }
     //TODO: Consistently use i32 or u32, not both
-    pub fn render_and_dispose(
-        &mut self,
-        entry: BLooperBlockRef,
-        label_helper: u32,
-    ) -> ExpressionRef {
+    pub fn render_and_dispose(&mut self, entry: BLooperBlockRef, label_helper: u32)
+        -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
             RelooperRenderAndDispose(self.inner, entry.inner, label_helper)
         })
@@ -1417,14 +1549,16 @@ impl BRelooperRef {
         to: &BLooperBlockRef,
         condition: ExpressionRef,
         code: ExpressionRef,
-    ) {
+    )
+    {
         unsafe { RelooperAddBranch(from.inner, to.inner, condition.inner, code.inner) }
     }
     pub fn add_block_with_switch(
         &mut self,
         code: ExpressionRef,
         condition: ExpressionRef,
-    ) -> BLooperBlockRef {
+    ) -> BLooperBlockRef
+    {
         BLooperBlockRef::new(unsafe {
             RelooperAddBlockWithSwitch(self.inner, code.inner, condition.inner)
         })
@@ -1434,7 +1568,8 @@ impl BRelooperRef {
         to: &BLooperBlockRef,
         mut indexes: Vec<u32>,
         code: ExpressionRef,
-    ) {
+    )
+    {
         unsafe {
             RelooperAddBranchForSwitch(
                 from.inner,
@@ -1447,16 +1582,20 @@ impl BRelooperRef {
     }
 }
 #[allow(dead_code)]
-pub struct GlobalRef {
+pub struct GlobalRef
+{
     inner: BinaryenGlobalRef,
 }
-impl GlobalRef {
-    fn new(g: BinaryenGlobalRef) -> Self {
+impl GlobalRef
+{
+    fn new(g: BinaryenGlobalRef) -> Self
+    {
         Self { inner: g }
     }
 }
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum MType {
+pub enum MType
+{
     I32,
     I64,
     F32,
@@ -1473,91 +1612,107 @@ pub enum MType {
     Neg,
 }
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub struct Type {
+pub struct Type
+{
     inner: BinaryenType,
     pub matchable_type: MType,
 }
-impl Type {
-    pub fn neg() -> Self {
+impl Type
+{
+    pub fn neg() -> Self
+    {
         return Self {
-            inner: {  usize::MAX },
+            inner: { usize::MAX },
             matchable_type: MType::Neg,
         };
     }
-    pub fn int_32() -> Self {
+    pub fn int_32() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeInt32() } },
             matchable_type: MType::I32,
         };
     }
-    pub fn int_64() -> Self {
+    pub fn int_64() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeInt64() } },
             matchable_type: MType::I64,
         };
     }
-    pub fn float_32() -> Self {
+    pub fn float_32() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeFloat32() } },
             matchable_type: MType::F32,
         };
     }
-    pub fn float_64() -> Self {
+    pub fn float_64() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeFloat64() } },
             matchable_type: MType::F64,
         };
     }
-    pub fn none() -> Self {
+    pub fn none() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeNone() } },
             matchable_type: MType::None_,
         };
     }
-    pub fn unreachable() -> Self {
+    pub fn unreachable() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeUnreachable() } },
             matchable_type: MType::Unreachable,
         };
     }
-    pub fn funcref() -> Self {
+    pub fn funcref() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeFuncref() } },
             matchable_type: MType::Funcref,
         };
     }
-    pub fn externref() -> Self {
+    pub fn externref() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeExternref() } },
             matchable_type: MType::Externref,
         };
     }
-    pub fn exnref() -> Self {
+    pub fn exnref() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeExnref() } },
             matchable_type: MType::Exnref,
         };
     }
-    pub fn auto() -> Self {
+    pub fn auto() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeAuto() } },
             matchable_type: MType::Auto,
         };
     }
-    pub fn i31ref() -> Self {
+    pub fn i31ref() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeI31ref() } },
             matchable_type: MType::I31Ref,
         };
     }
-    pub fn eqref() -> Self {
+    pub fn eqref() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeEqref() } },
             matchable_type: MType::EqRef,
         };
     }
 
-    pub fn create(value_types: Vec<Type>) -> Self {
+    pub fn create(value_types: Vec<Type>) -> Self
+    {
         return unsafe {
             let mut inners = value_types
                 .iter()
@@ -1572,12 +1727,14 @@ impl Type {
             }
         };
     }
-    pub fn arity(&mut self) -> u32 {
+    pub fn arity(&mut self) -> u32
+    {
         unsafe { BinaryenTypeArity(self.inner) }
     }
 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Features {
+pub struct Features
+{
     inner: BinaryenFeatures,
 }
 
@@ -1599,12 +1756,14 @@ pub struct Features {
 */
 macro_rules! impl_feature {
     ($name: ident, $check: ident) => {
-        pub fn $name() -> i32 {
+        pub fn $name() -> i32
+        {
             return unsafe { $check() } as i32;
         }
     };
 }
-impl Features {
+impl Features
+{
     impl_feature!(mvp, BinaryenFeatureMVP);
     impl_feature!(atomics, BinaryenFeatureAtomics);
     impl_feature!(bulk_memory, BinaryenFeatureBulkMemory);
@@ -1620,23 +1779,30 @@ impl Features {
     impl_feature!(memory_64, BinaryenFeatureMemory64);
     impl_feature!(feature_all, BinaryenFeatureAll);
 }
-pub struct EventRef {
+pub struct EventRef
+{
     pub inner: BinaryenEventRef,
 }
-impl EventRef {
-    fn new(e: BinaryenEventRef) -> Self {
+impl EventRef
+{
+    fn new(e: BinaryenEventRef) -> Self
+    {
         Self { inner: e }
     }
 }
 
-pub struct FunctionRef {
+pub struct FunctionRef
+{
     inner: BinaryenFunctionRef,
 }
-impl FunctionRef {
-    fn new(e: BinaryenFunctionRef) -> Self {
+impl FunctionRef
+{
+    fn new(e: BinaryenFunctionRef) -> Self
+    {
         Self { inner: e }
     }
-    pub fn get_name(&self) -> &str {
+    pub fn get_name(&self) -> &str
+    {
         let c_buf = unsafe { BinaryenFunctionGetName(self.inner) };
         let c_str = unsafe { std::ffi::CStr::from_ptr(c_buf) };
         c_str.to_str().unwrap()
@@ -1644,7 +1810,8 @@ impl FunctionRef {
 }
 
 #[cfg(test)]
-mod tests {
+mod tests
+{
     #![allow(
         dead_code,
         unused_variables,
@@ -1660,7 +1827,8 @@ mod tests {
         static ref v128_byes: Vec<i128> =
             vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
     }
-    fn make_unary(module: &mut Module, op: Op, input_type: Type) -> ExpressionRef {
+    fn make_unary(module: &mut Module, op: Op, input_type: Type) -> ExpressionRef
+    {
         let c = match input_type.matchable_type {
             MType::I32 => module.make_const(Literal::int_32(-10)),
             MType::I64 => module.make_const(Literal::int_64(-22)),
@@ -1687,7 +1855,8 @@ mod tests {
         // module.unary(op, c)
     }
 
-    fn make_binary(module: &mut Module, op: Op, input_type: Type) -> ExpressionRef {
+    fn make_binary(module: &mut Module, op: Op, input_type: Type) -> ExpressionRef
+    {
         if input_type == Type::int_32() {
             let temp = module.make_const(Literal::int_32(-11));
             // Rust limitation, Cannot borrow `module` as mutable more than once in the same line.
@@ -1713,50 +1882,61 @@ mod tests {
         }
     }
 
-    fn make_int_32(module: &mut Module, x: i32) -> ExpressionRef {
+    fn make_int_32(module: &mut Module, x: i32) -> ExpressionRef
+    {
         module.make_const(Literal::int_32(x))
     }
-    fn make_int_64(module: &mut Module, x: i64) -> ExpressionRef {
+    fn make_int_64(module: &mut Module, x: i64) -> ExpressionRef
+    {
         module.make_const(Literal::int_64(x))
     }
-    fn make_float_32(module: &mut Module, x: f32) -> ExpressionRef {
+    fn make_float_32(module: &mut Module, x: f32) -> ExpressionRef
+    {
         module.make_const(Literal::float_32(x))
     }
-    fn make_float_64(module: &mut Module, x: f64) -> ExpressionRef {
+    fn make_float_64(module: &mut Module, x: f64) -> ExpressionRef
+    {
         module.make_const(Literal::float_64(x))
     }
-    fn make_something(module: &mut Module) -> ExpressionRef {
+    fn make_something(module: &mut Module) -> ExpressionRef
+    {
         make_int_32(module, 1337)
     }
-    fn make_dropped_int_32(module: &mut Module, x: i32) -> ExpressionRef {
+    fn make_dropped_int_32(module: &mut Module, x: i32) -> ExpressionRef
+    {
         let c = module.make_const(Literal::int_32(x));
         module.drop_var(c)
     }
     //TODO: Simd
-    fn make_memory_init(module: &mut Module) -> ExpressionRef {
+    fn make_memory_init(module: &mut Module) -> ExpressionRef
+    {
         let dest = make_int_32(module, 1024);
         let offset = make_int_32(module, 0);
         let size = make_int_32(module, 12);
         module.memory_init(0, dest, offset, size)
     }
-    fn make_data_drop(module: &mut Module) -> ExpressionRef {
+    fn make_data_drop(module: &mut Module) -> ExpressionRef
+    {
         module.data_drop(0)
     }
 
-    fn make_memory_copy(module: &mut Module) -> ExpressionRef {
+    fn make_memory_copy(module: &mut Module) -> ExpressionRef
+    {
         let dest = make_int_32(module, 2048);
         let source = make_int_32(module, 1024);
         let size = make_int_32(module, 12);
         module.memory_copy(dest, source, size)
     }
-    fn make_memory_fill(module: &mut Module) -> ExpressionRef {
+    fn make_memory_fill(module: &mut Module) -> ExpressionRef
+    {
         let dest = make_int_32(module, 2048);
         let source = make_int_32(module, 1024);
         let size = make_int_32(module, 12);
         module.memory_fill(dest, source, size)
     }
     #[test]
-    fn test_types() {
+    fn test_types()
+    {
         //TODO like 152 - 158 example
         //TODO: add expanding example
         {
@@ -1832,7 +2012,8 @@ mod tests {
         }
     }
     #[test]
-    fn test_features() {
+    fn test_features()
+    {
         assert_eq!(Features::mvp(), 0);
         assert_eq!(Features::atomics(), 1);
         assert_eq!(Features::bulk_memory(), 16);
@@ -1852,7 +2033,8 @@ mod tests {
         //     println!("BinaryenFeatureBulkMemory: {:?}", Features::bulk_memory());
     }
     #[test]
-    fn test_core() {
+    fn test_core()
+    {
         let mut module = Module::new();
         let (ConstI32, ConstI64, ConstF32, ConstF64, ConstF32Bits, ConstF64Bits) = (
             module.make_const(Literal::int_32(1)),
@@ -2283,7 +2465,8 @@ mod tests {
         //Module is implicitly droped here v (see `module.drop`)
     } // <--------------------------------/
     #[test]
-    pub fn test_unreachable() {
+    pub fn test_unreachable()
+    {
         let mut module = Module::new();
         let unr = module.unreachable();
         let body = module.call_indirect(unr, vec![], Type::none(), Type::int_64());
@@ -2293,12 +2476,14 @@ mod tests {
         //Module is implicitly disposed
     }
 
-    pub fn make_call_check(module: &mut Module, x: i32) -> ExpressionRef {
+    pub fn make_call_check(module: &mut Module, x: i32) -> ExpressionRef
+    {
         let call_operands = vec![make_int_32(module, x)];
         module.call("check", call_operands, Type::none())
     }
     #[test]
-    pub fn test_relooper() {
+    pub fn test_relooper()
+    {
         let mut module = Module::new();
 
         module.add_function_import("check", "module", "check", Type::int_32(), Type::none());
@@ -2788,7 +2973,8 @@ mod tests {
     //     assert!(size < 512);
     // }
 
-    fn main() {
+    fn main()
+    {
         println!("You should run with `cargo test` from command line, not `cargo run` :)");
     }
 }
