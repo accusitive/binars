@@ -2,67 +2,54 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(unused_imports)]
+use binars_sys::*;
 use std::rc::Rc;
 use std::{convert::TryInto, ffi::CString};
-use binars_sys::*;
 #[cfg(test)]
 #[macro_use]
 extern crate lazy_static;
 
-pub struct Literal
-{
+pub struct Literal {
     inner: BinaryenLiteral,
 }
-impl Literal
-{
-    pub fn new(l: BinaryenLiteral) -> Self
-    {
+impl Literal {
+    pub fn new(l: BinaryenLiteral) -> Self {
         Self { inner: l }
     }
 
-    pub fn int_32(x: i32) -> Literal
-    {
+    pub fn int_32(x: i32) -> Literal {
         unsafe { Self::new(BinaryenLiteralInt32(x)) }
     }
-    pub fn int_64(x: i64) -> Literal
-    {
+    pub fn int_64(x: i64) -> Literal {
         unsafe { Self::new(BinaryenLiteralInt64(x)) }
     }
-    pub fn float_32(x: f32) -> Literal
-    {
+    pub fn float_32(x: f32) -> Literal {
         unsafe { Self::new(BinaryenLiteralFloat32(x)) }
     }
-    pub fn float_64(x: f64) -> Literal
-    {
+    pub fn float_64(x: f64) -> Literal {
         unsafe { Self::new(BinaryenLiteralFloat64(x)) }
     }
 
-    pub fn float_32_bits(x: i32) -> Literal
-    {
+    pub fn float_32_bits(x: i32) -> Literal {
         unsafe { Self::new(BinaryenLiteralFloat32Bits(x)) }
     }
-    pub fn float_64_bits(x: i64) -> Literal
-    {
+    pub fn float_64_bits(x: i64) -> Literal {
         unsafe { Self::new(BinaryenLiteralFloat64Bits(x)) }
     }
 }
 #[derive(Debug)]
-pub struct Op
-{
+pub struct Op {
     inner: BinaryenOp,
 }
 macro_rules! binop {
     ($name: ident, $full: ident) => {
-        pub fn $name() -> Op
-        {
+        pub fn $name() -> Op {
             unsafe { Op::new($full()) }
         }
     };
 }
-impl Op
-{
-    pub fn new(op: BinaryenOp) -> Self
-    {
+impl Op {
+    pub fn new(op: BinaryenOp) -> Self {
         return Self { inner: op };
     }
     // Potentially use macros for this?
@@ -517,70 +504,55 @@ impl Op
     binop!(swizzle_vec8x16, BinaryenSwizzleVec8x16);
 }
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub struct ExpressionRef
-{
+pub struct ExpressionRef {
     inner: BinaryenExpressionRef,
 }
-impl ExpressionRef
-{
-    pub fn new(expr: BinaryenExpressionRef) -> Self
-    {
+impl ExpressionRef {
+    pub fn new(expr: BinaryenExpressionRef) -> Self {
         return ExpressionRef { inner: expr };
     }
-    pub fn null_expr() -> ExpressionRef
-    {
+    pub fn null_expr() -> ExpressionRef {
         Self::new(std::ptr::null_mut::<BinaryenExpression>())
     }
-    pub fn print(&self)
-    {
+    pub fn print(&self) {
         unsafe { BinaryenExpressionPrint(self.inner) }
     }
 }
 #[derive(Debug)]
-pub struct Export
-{
+pub struct Export {
     inner: *mut BinaryenExport,
 }
-impl Export
-{
-    fn new(expr: *mut BinaryenExport) -> Self
-    {
+impl Export {
+    fn new(expr: *mut BinaryenExport) -> Self {
         return Self { inner: expr };
     }
 }
 unsafe impl Send for Export {}
 unsafe impl Sync for Export {}
 #[derive(Debug)]
-pub struct Module
-{
+pub struct Module {
     inner: BinaryenModuleRef,
 }
 unsafe impl Send for Module {}
 unsafe impl Sync for Module {}
-impl Module
-{
-    pub fn new() -> Self
-    {
+impl Module {
+    pub fn new() -> Self {
         return unsafe {
             Self {
                 inner: BinaryenModuleCreate(),
             }
         };
     }
-    pub fn print(&mut self)
-    {
+    pub fn print(&mut self) {
         unsafe { BinaryenModulePrint(self.inner) }
     }
-    pub fn print_wat(&mut self)
-    {
+    pub fn print_wat(&mut self) {
         unsafe { BinaryenModulePrint(self.inner) }
     }
-    pub fn print_asmjs(&mut self)
-    {
+    pub fn print_asmjs(&mut self) {
         unsafe { BinaryenModulePrintAsmjs(self.inner) }
     }
-    pub fn get_local(&mut self, index: i32, dype: Type) -> ExpressionRef
-    {
+    pub fn get_local(&mut self, index: i32, dype: Type) -> ExpressionRef {
         unsafe {
             ExpressionRef::new(BinaryenLocalGet(
                 self.inner,
@@ -589,8 +561,7 @@ impl Module
             ))
         }
     }
-    pub fn set_local(&mut self, index: i32, value: ExpressionRef) -> ExpressionRef
-    {
+    pub fn set_local(&mut self, index: i32, value: ExpressionRef) -> ExpressionRef {
         unsafe {
             ExpressionRef::new(BinaryenLocalSet(
                 self.inner,
@@ -602,8 +573,7 @@ impl Module
     /*
     Create new binary operation
     */
-    pub fn binary(&mut self, op: Op, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef
-    {
+    pub fn binary(&mut self, op: Op, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef {
         return unsafe {
             ExpressionRef::new(BinaryenBinary(
                 self.inner,
@@ -621,8 +591,7 @@ impl Module
         results: Type,
         var_types: Vec<Type>,
         body: ExpressionRef,
-    ) -> FunctionRef
-    {
+    ) -> FunctionRef {
         let mut inners = var_types
             .iter()
             .map(|t| t.inner)
@@ -641,36 +610,33 @@ impl Module
         })
     }
     /// Bool whether the validation was successful
-    pub fn validate(&mut self) -> bool
-    {
+    pub fn validate(&mut self) -> bool {
         return unsafe { BinaryenModuleValidate(self.inner) == 1 };
     }
     /// Incase you want to have the raw validation number.
-    pub fn validate_i(&mut self) -> i32
-    {
+    pub fn validate_i(&mut self) -> i32 {
         return unsafe { BinaryenModuleValidate(self.inner) };
     }
     /// Optimise
-    pub fn optimize(&mut self)
-    {
+    pub fn optimize(&mut self) {
         unsafe { BinaryenModuleOptimize(self.inner) }
     }
     #[doc = "Get current optimization level, set new optimization `level`, optimize, set back to original optimization level."]
-    pub fn optimize_with_level(&mut self, level: i32)
-    {
+    pub fn optimize_with_level(&mut self, level: i32) {
         let current_level = unsafe { BinaryenGetOptimizeLevel() };
         unsafe { BinaryenSetOptimizeLevel(level) }
         unsafe { BinaryenModuleOptimize(self.inner) }
         unsafe { BinaryenSetOptimizeLevel(current_level) }
     }
-    pub fn make_const(&mut self, value: Literal) -> ExpressionRef
-    {
+    pub fn make_const(&mut self, value: Literal) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenConst(self.inner, value.inner) })
     }
 
-    pub fn new_nameless_block(&mut self, children: Vec<ExpressionRef>, type_: Type)
-        -> ExpressionRef
-    {
+    pub fn new_nameless_block(
+        &mut self,
+        children: Vec<ExpressionRef>,
+        type_: Type,
+    ) -> ExpressionRef {
         let mut inners = children
             .iter()
             .map(|t| t.inner)
@@ -691,8 +657,7 @@ impl Module
         name: &str,
         children: Vec<ExpressionRef>,
         type_: Type,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         let mut inners = children
             .iter()
             .map(|t| t.inner)
@@ -707,8 +672,7 @@ impl Module
             )
         })
     }
-    pub fn add_export(&mut self, internal_name: &str, external_name: &str) -> Export
-    {
+    pub fn add_export(&mut self, internal_name: &str, external_name: &str) -> Export {
         let c_internal_name = CString::new(internal_name.to_string()).unwrap();
         let c_external_name = CString::new(external_name.to_string()).unwrap();
         return Export::new(unsafe {
@@ -719,8 +683,7 @@ impl Module
             )
         });
     }
-    pub fn add_function_export(&mut self, internal_name: &str, external_name: &str) -> Export
-    {
+    pub fn add_function_export(&mut self, internal_name: &str, external_name: &str) -> Export {
         let c_internal_name = CString::new(internal_name).unwrap();
         let c_external_name = CString::new(external_name).unwrap();
 
@@ -732,8 +695,7 @@ impl Module
             )
         });
     }
-    pub fn add_table_export(&mut self, internal_name: &str, external_name: &str) -> Export
-    {
+    pub fn add_table_export(&mut self, internal_name: &str, external_name: &str) -> Export {
         let c_internal_name = CString::new(internal_name).unwrap().as_ptr();
         let c_external_name = CString::new(external_name).unwrap().as_ptr();
 
@@ -741,8 +703,7 @@ impl Module
             BinaryenAddTableExport(self.inner, c_internal_name, c_external_name)
         });
     }
-    pub fn add_memory_export(&mut self, internal_name: &str, external_name: &str) -> Export
-    {
+    pub fn add_memory_export(&mut self, internal_name: &str, external_name: &str) -> Export {
         let c_internal_name = CString::new(internal_name).unwrap().as_ptr();
         let c_external_name = CString::new(external_name).unwrap().as_ptr();
 
@@ -768,8 +729,7 @@ impl Module
     //     println!("{:?}", c);
     //     // std::fs::write(filename, c.to_string_lossy().to_string()).unwrap();
     // }
-    pub fn write_text(&mut self, filename: &str)
-    {
+    pub fn write_text(&mut self, filename: &str) {
         let c = unsafe {
             let was_color_originally_enabled = BinaryenAreColorsEnabled();
             BinaryenSetColorsEnabled(0);
@@ -783,18 +743,20 @@ impl Module
     pub fn compile(&mut self) -> &str {
         let c = unsafe {
             let was_color_originally_enabled = BinaryenAreColorsEnabled();
-            let c= BinaryenModuleAllocateAndWrite(self.inner, std::ptr::null());
+            let c = BinaryenModuleAllocateAndWrite(self.inner, std::ptr::null());
             println!("c: {:?}\n", c);
             println!("{:?}", 0x7f7afc00bde0 as *const i8);
 
             std::ffi::CStr::from_ptr(c.binary as *const i8)
         };
         std::fs::write("testing", c.to_string_lossy().to_string()).unwrap();
-"   "
+        std::fs::remove_file("testing").unwrap();
+
+        "   "
+
         // c
     }
-    pub fn compile_text(&mut self) -> String
-    {
+    pub fn compile_text(&mut self) -> String {
         let c = unsafe {
             let was_color_originally_enabled = BinaryenAreColorsEnabled();
             BinaryenSetColorsEnabled(0);
@@ -806,13 +768,11 @@ impl Module
         c.to_string_lossy().to_string()
         // std::fs::write(filename, c.to_string_lossy().to_string()).unwrap();
     }
-    pub fn unary(&mut self, op: Op, value: ExpressionRef) -> ExpressionRef
-    {
+    pub fn unary(&mut self, op: Op, value: ExpressionRef) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenUnary(self.inner, op.inner, value.inner) })
     }
     /// Cant use `module.drop()` because thats taken up by `impl Drop`.
-    pub fn drop_var(&mut self, var: ExpressionRef) -> ExpressionRef
-    {
+    pub fn drop_var(&mut self, var: ExpressionRef) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenDrop(self.inner, var.inner) })
     }
     pub fn memory_init(
@@ -821,8 +781,7 @@ impl Module
         dest: ExpressionRef,
         offset: ExpressionRef,
         size: ExpressionRef,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenMemoryInit(
                 self.inner,
@@ -838,8 +797,7 @@ impl Module
         dest: ExpressionRef,
         source: ExpressionRef,
         size: ExpressionRef,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenMemoryCopy(self.inner, dest.inner, source.inner, size.inner)
         })
@@ -849,35 +807,34 @@ impl Module
         dest: ExpressionRef,
         value: ExpressionRef,
         size: ExpressionRef,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenMemoryFill(self.inner, dest.inner, value.inner, size.inner)
         })
     }
-    pub fn data_drop(&mut self, segment: i32) -> ExpressionRef
-    {
+    pub fn data_drop(&mut self, segment: i32) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenDataDrop(self.inner, segment.try_into().unwrap()) })
     }
-    pub fn ref_null(&mut self, type_: Type) -> ExpressionRef
-    {
+    pub fn ref_null(&mut self, type_: Type) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenRefNull(self.inner, type_.inner) })
     }
 
-    pub fn ref_func(&mut self, rfunc: &str) -> ExpressionRef
-    {
+    pub fn ref_func(&mut self, rfunc: &str) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             let cfunc = CString::new(rfunc).unwrap();
             BinaryenRefFunc(self.inner, cfunc.as_ptr())
         })
     }
-    pub fn make_i31(&mut self, value: ExpressionRef) -> ExpressionRef
-    {
+    pub fn make_i31(&mut self, value: ExpressionRef) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenI31New(self.inner, value.inner) })
     }
-    pub fn add_event(&mut self, name: &str, attribute: i32, params: Type, results: Type)
-        -> EventRef
-    {
+    pub fn add_event(
+        &mut self,
+        name: &str,
+        attribute: i32,
+        params: Type,
+        results: Type,
+    ) -> EventRef {
         EventRef::new(unsafe {
             let cname = CString::new(name).unwrap();
             BinaryenAddEvent(
@@ -889,8 +846,7 @@ impl Module
             )
         })
     }
-    pub fn throw(&mut self, event: &str, operands: Vec<ExpressionRef>) -> ExpressionRef
-    {
+    pub fn throw(&mut self, event: &str, operands: Vec<ExpressionRef>) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             let mut inners = operands
                 .iter()
@@ -906,12 +862,10 @@ impl Module
             )
         })
     }
-    pub fn pop(&mut self, type_: Type) -> ExpressionRef
-    {
+    pub fn pop(&mut self, type_: Type) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenPop(self.inner, type_.inner) })
     }
-    pub fn rethrow(&mut self, exnref: ExpressionRef) -> ExpressionRef
-    {
+    pub fn rethrow(&mut self, exnref: ExpressionRef) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenRethrow(self.inner, exnref.inner) })
     }
     pub fn br_on_exn(
@@ -919,8 +873,7 @@ impl Module
         name: &str,
         event_name: &str,
         exnref: ExpressionRef,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             let cname = CString::new(name).unwrap();
             let cevent_name = CString::new(event_name).unwrap();
@@ -937,8 +890,7 @@ impl Module
         condition: ExpressionRef,
         if_true: ExpressionRef,
         if_false: ExpressionRef,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenIf(self.inner, condition.inner, if_true.inner, if_false.inner)
             // match if_false {
@@ -952,8 +904,7 @@ impl Module
             // }
         })
     }
-    pub fn r#loop(&mut self, ins: &str, body: ExpressionRef) -> ExpressionRef
-    {
+    pub fn r#loop(&mut self, ins: &str, body: ExpressionRef) -> ExpressionRef {
         unsafe {
             ExpressionRef::new(BinaryenLoop(
                 self.inner,
@@ -968,8 +919,7 @@ impl Module
         name: &str,
         condition: Option<ExpressionRef>,
         value: Option<ExpressionRef>,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             let cins = CString::new(name).unwrap();
             match condition {
@@ -1006,8 +956,7 @@ impl Module
         default_name: &str,
         condition: ExpressionRef,
         value: ExpressionRef,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         let mut cnames = names
             .iter()
             .map(|&n| CString::new(n).unwrap().as_ptr())
@@ -1028,8 +977,7 @@ impl Module
         target: &str,
         operands: Vec<ExpressionRef>,
         return_type: Type,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         let mut inners = operands
             .iter()
             .map(|o| o.inner)
@@ -1051,8 +999,7 @@ impl Module
         operands: Vec<ExpressionRef>,
         params: Type,
         results: Type,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         let mut operands_inners = operands
             .iter()
             .map(|o| o.inner)
@@ -1069,8 +1016,7 @@ impl Module
             )
         })
     }
-    pub fn tee_local(&mut self, index: i32, value: ExpressionRef, type_: Type) -> ExpressionRef
-    {
+    pub fn tee_local(&mut self, index: i32, value: ExpressionRef, type_: Type) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenLocalTee(self.inner, index as u32, value.inner, type_.inner)
         })
@@ -1083,8 +1029,7 @@ impl Module
         align: i32,
         type_: Type,
         ptr: ExpressionRef,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenLoad(
                 self.inner,
@@ -1105,8 +1050,7 @@ impl Module
         ptr: ExpressionRef,
         value: ExpressionRef,
         type_: Type,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenStore(
                 self.inner,
@@ -1125,8 +1069,7 @@ impl Module
         if_true: ExpressionRef,
         if_false: ExpressionRef,
         type_: Type,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenSelect(
                 self.inner,
@@ -1137,8 +1080,7 @@ impl Module
             )
         })
     }
-    pub fn r#return(&mut self, value: ExpressionRef) -> ExpressionRef
-    {
+    pub fn r#return(&mut self, value: ExpressionRef) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenReturn(self.inner, value.inner) })
     }
     pub fn return_call(
@@ -1146,8 +1088,7 @@ impl Module
         target: &str,
         operands: Vec<ExpressionRef>,
         return_type: Type,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         let mut operands_inners = operands
             .iter()
             .map(|o| o.inner)
@@ -1169,8 +1110,7 @@ impl Module
         operands: Vec<ExpressionRef>,
         params: Type,
         result_type: Type,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         let mut operands_inners = operands
             .iter()
             .map(|o| o.inner)
@@ -1187,16 +1127,13 @@ impl Module
             )
         })
     }
-    pub fn ref_is_null(&mut self, value: ExpressionRef) -> ExpressionRef
-    {
+    pub fn ref_is_null(&mut self, value: ExpressionRef) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenRefIsNull(self.inner, value.inner) })
     }
-    pub fn ref_eq(&mut self, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef
-    {
+    pub fn ref_eq(&mut self, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenRefEq(self.inner, left.inner, right.inner) })
     }
-    pub fn r#try(&mut self, body: ExpressionRef, catch: ExpressionRef) -> ExpressionRef
-    {
+    pub fn r#try(&mut self, body: ExpressionRef, catch: ExpressionRef) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenTry(self.inner, body.inner, catch.inner) })
     }
     pub fn atomic_store(
@@ -1206,8 +1143,7 @@ impl Module
         ptr: ExpressionRef,
         value: ExpressionRef,
         type_: Type,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenAtomicStore(
                 self.inner,
@@ -1225,8 +1161,7 @@ impl Module
         offset: i32,
         type_: Type,
         ptr: ExpressionRef,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenAtomicLoad(
                 self.inner,
@@ -1243,8 +1178,7 @@ impl Module
         expected: ExpressionRef,
         timeout: ExpressionRef,
         type_: Type,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenAtomicWait(
                 self.inner,
@@ -1259,18 +1193,15 @@ impl Module
         &mut self,
         ptr: ExpressionRef,
         notify_count: ExpressionRef,
-    ) -> ExpressionRef
-    {
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenAtomicNotify(self.inner, ptr.inner, notify_count.inner)
         })
     }
-    pub fn atomic_fence(&mut self) -> ExpressionRef
-    {
+    pub fn atomic_fence(&mut self) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenAtomicFence(self.inner) })
     }
-    pub fn make_tuple(&mut self, operands: Vec<ExpressionRef>) -> ExpressionRef
-    {
+    pub fn make_tuple(&mut self, operands: Vec<ExpressionRef>) -> ExpressionRef {
         let mut operands_inners = operands
             .iter()
             .map(|o| o.inner)
@@ -1284,34 +1215,27 @@ impl Module
             )
         })
     }
-    pub fn extract_tuple(&mut self, tuple: ExpressionRef, index: i32) -> ExpressionRef
-    {
+    pub fn extract_tuple(&mut self, tuple: ExpressionRef, index: i32) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             BinaryenTupleExtract(self.inner, tuple.inner, index.try_into().unwrap())
         })
     }
-    pub fn memory_size(&mut self) -> ExpressionRef
-    {
+    pub fn memory_size(&mut self) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenMemorySize(self.inner) })
     }
-    pub fn memory_grow(&mut self, delta: ExpressionRef) -> ExpressionRef
-    {
+    pub fn memory_grow(&mut self, delta: ExpressionRef) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenMemoryGrow(self.inner, delta.inner) })
     }
-    pub fn new_i31(&mut self, value: ExpressionRef) -> ExpressionRef
-    {
+    pub fn new_i31(&mut self, value: ExpressionRef) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenI31New(self.inner, value.inner) })
     }
-    pub fn get_i31(&mut self, i31: ExpressionRef, signed: i32) -> ExpressionRef
-    {
+    pub fn get_i31(&mut self, i31: ExpressionRef, signed: i32) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenI31Get(self.inner, i31.inner, signed) })
     }
-    pub fn nop(&mut self) -> ExpressionRef
-    {
+    pub fn nop(&mut self) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenNop(self.inner) })
     }
-    pub fn unreachable(&mut self) -> ExpressionRef
-    {
+    pub fn unreachable(&mut self) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenUnreachable(self.inner) })
     }
     //TODO: Use bool instead of i8
@@ -1321,8 +1245,7 @@ impl Module
         type_: Type,
         mutable: i8,
         init: ExpressionRef,
-    ) -> GlobalRef
-    {
+    ) -> GlobalRef {
         GlobalRef::new(unsafe {
             let cname = CString::new(name).unwrap();
             BinaryenAddGlobal(self.inner, cname.as_ptr(), type_.inner, mutable, init.inner)
@@ -1335,8 +1258,7 @@ impl Module
         external_base_name: &str,
         params: Type,
         result: Type,
-    )
-    {
+    ) {
         unsafe {
             let c_internal_name = CString::new(internal_name).unwrap();
             let c_external_module_name = CString::new(external_module_name).unwrap();
@@ -1357,8 +1279,7 @@ impl Module
         maximum: u32,
         func_names: Vec<&str>,
         offset: ExpressionRef,
-    )
-    {
+    ) {
         unsafe {
             let mut c_func_names = vec![];
             for n in func_names {
@@ -1392,8 +1313,7 @@ impl Module
         segment_offsets: Vec<ExpressionRef>,
         mut segment_sizes: Vec<u32>,
         shared: bool,
-    )
-    {
+    ) {
         let mut csegs = vec![];
         for s in segments {
             csegs.push(CString::new(s).unwrap());
@@ -1424,79 +1344,69 @@ impl Module
             )
         }
     }
-    pub fn set_start(&mut self, start: FunctionRef)
-    {
+    pub fn set_start(&mut self, start: FunctionRef) {
         unsafe { BinaryenSetStart(self.inner, start.inner) }
     }
-    pub fn auto_drop(&mut self)
-    {
+    pub fn auto_drop(&mut self) {
         unsafe { BinaryenModuleAutoDrop(self.inner) }
     }
-    pub fn set_features(&mut self, features: i32)
-    {
+    pub fn set_features(&mut self, features: i32) {
         unsafe { BinaryenModuleSetFeatures(self.inner, features as u32) }
     }
-    pub fn get_features(&mut self) -> Features
-    {
+    pub fn get_features(&mut self) -> Features {
         Features {
             inner: unsafe { BinaryenModuleGetFeatures(self.inner) },
         }
     }
-    pub fn make_relooper(&mut self) -> BRelooperRef
-    {
+    pub fn make_relooper(&mut self) -> BRelooperRef {
         BRelooperRef::new(unsafe { RelooperCreate(self.inner) })
     }
-    
 }
 impl From<&str> for Module {
     fn from(s: &str) -> Self {
         return Module {
             inner: unsafe {
-                let mut c = s.chars().map(|c| c as std::os::raw::c_char).collect::<Vec<std::os::raw::c_char>>();
+                let mut c = s
+                    .chars()
+                    .map(|c| c as std::os::raw::c_char)
+                    .collect::<Vec<std::os::raw::c_char>>();
                 let z = c.as_mut_ptr();
                 println!("{:?}", z);
-                BinaryenModuleRead(z ,s.len().try_into().unwrap())
-            }
-        }
+                BinaryenModuleRead(z, s.len().try_into().unwrap())
+            },
+        };
     }
 }
-impl Drop for Module
-{
-    fn drop(&mut self)
-    {
+impl Drop for Module {
+    fn drop(&mut self) {
         unsafe { BinaryenModuleDispose(self.inner) }
     }
 }
-pub struct BLooperBlockRef
-{
+pub struct BLooperBlockRef {
     inner: RelooperBlockRef,
 }
-impl BLooperBlockRef
-{
-    fn new(rb: RelooperBlockRef) -> Self
-    {
+impl BLooperBlockRef {
+    fn new(rb: RelooperBlockRef) -> Self {
         Self { inner: rb }
     }
 }
 //TODO: Find better name for BRelooperRef
-pub struct BRelooperRef
-{
+pub struct BRelooperRef {
     inner: RelooperRef,
 }
-impl BRelooperRef
-{
-    fn new(r: RelooperRef) -> Self
-    {
+impl BRelooperRef {
+    fn new(r: RelooperRef) -> Self {
         Self { inner: r }
     }
-    pub fn add_block(&mut self, code: ExpressionRef) -> BLooperBlockRef
-    {
+    pub fn add_block(&mut self, code: ExpressionRef) -> BLooperBlockRef {
         BLooperBlockRef::new(unsafe { RelooperAddBlock(self.inner, code.inner) })
     }
     //TODO: Consistently use i32 or u32, not both
-    pub fn render_and_dispose(&mut self, entry: BLooperBlockRef, label_helper: u32)
-        -> ExpressionRef
-    {
+    pub fn render_and_dispose(
+        &mut self,
+        entry: BLooperBlockRef,
+        label_helper: u32,
+    ) -> ExpressionRef {
         ExpressionRef::new(unsafe {
             RelooperRenderAndDispose(self.inner, entry.inner, label_helper)
         })
@@ -1507,35 +1417,45 @@ impl BRelooperRef
         to: &BLooperBlockRef,
         condition: ExpressionRef,
         code: ExpressionRef,
-    )
-    {
+    ) {
         unsafe { RelooperAddBranch(from.inner, to.inner, condition.inner, code.inner) }
     }
-    pub fn add_block_with_switch(&mut self, code: ExpressionRef, condition: ExpressionRef) -> BLooperBlockRef{
+    pub fn add_block_with_switch(
+        &mut self,
+        code: ExpressionRef,
+        condition: ExpressionRef,
+    ) -> BLooperBlockRef {
         BLooperBlockRef::new(unsafe {
             RelooperAddBlockWithSwitch(self.inner, code.inner, condition.inner)
         })
     }
-    pub fn add_branch_for_switch(from: &BLooperBlockRef, to: &BLooperBlockRef, mut indexes: Vec<u32>, code: ExpressionRef){
+    pub fn add_branch_for_switch(
+        from: &BLooperBlockRef,
+        to: &BLooperBlockRef,
+        mut indexes: Vec<u32>,
+        code: ExpressionRef,
+    ) {
         unsafe {
-            RelooperAddBranchForSwitch(from.inner, to.inner, indexes.as_mut_ptr(), indexes.len().try_into().unwrap(), code.inner)
+            RelooperAddBranchForSwitch(
+                from.inner,
+                to.inner,
+                indexes.as_mut_ptr(),
+                indexes.len().try_into().unwrap(),
+                code.inner,
+            )
         }
     }
 }
-pub struct GlobalRef
-{
+pub struct GlobalRef {
     inner: BinaryenGlobalRef,
 }
-impl GlobalRef
-{
-    fn new(g: BinaryenGlobalRef) -> Self
-    {
+impl GlobalRef {
+    fn new(g: BinaryenGlobalRef) -> Self {
         Self { inner: g }
     }
 }
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum MType
-{
+pub enum MType {
     I32,
     I64,
     F32,
@@ -1552,110 +1472,91 @@ pub enum MType
     Neg,
 }
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub struct Type
-{
+pub struct Type {
     inner: BinaryenType,
     pub matchable_type: MType,
 }
-impl Type
-{
+impl Type {
     pub fn neg() -> Self {
         return Self {
-            inner: {
-                unsafe{
-                    usize::MAX
-                }
-            },
-            matchable_type: MType::Neg
-        }
+            inner: { unsafe { usize::MAX } },
+            matchable_type: MType::Neg,
+        };
     }
-    pub fn int_32() -> Self
-    {
+    pub fn int_32() -> Self {
         return Self {
             inner: { unsafe { BinaryenTypeInt32() } },
             matchable_type: MType::I32,
         };
     }
-    pub fn int_64() -> Self
-    {
+    pub fn int_64() -> Self {
         return Self {
             inner: { unsafe { BinaryenTypeInt64() } },
             matchable_type: MType::I64,
         };
     }
-    pub fn float_32() -> Self
-    {
+    pub fn float_32() -> Self {
         return Self {
             inner: { unsafe { BinaryenTypeFloat32() } },
             matchable_type: MType::F32,
         };
     }
-    pub fn float_64() -> Self
-    {
+    pub fn float_64() -> Self {
         return Self {
             inner: { unsafe { BinaryenTypeFloat64() } },
             matchable_type: MType::F64,
         };
     }
-    pub fn none() -> Self
-    {
+    pub fn none() -> Self {
         return Self {
             inner: { unsafe { BinaryenTypeNone() } },
             matchable_type: MType::None_,
         };
     }
-    pub fn unreachable() -> Self
-    {
+    pub fn unreachable() -> Self {
         return Self {
             inner: { unsafe { BinaryenTypeUnreachable() } },
             matchable_type: MType::Unreachable,
         };
     }
-    pub fn funcref() -> Self
-    {
+    pub fn funcref() -> Self {
         return Self {
             inner: { unsafe { BinaryenTypeFuncref() } },
             matchable_type: MType::Funcref,
         };
     }
-    pub fn externref() -> Self
-    {
+    pub fn externref() -> Self {
         return Self {
             inner: { unsafe { BinaryenTypeExternref() } },
             matchable_type: MType::Externref,
         };
     }
-    pub fn exnref() -> Self
-    {
+    pub fn exnref() -> Self {
         return Self {
             inner: { unsafe { BinaryenTypeExnref() } },
             matchable_type: MType::Exnref,
         };
     }
-    pub fn auto() -> Self
-    {
+    pub fn auto() -> Self {
         return Self {
             inner: { unsafe { BinaryenTypeAuto() } },
             matchable_type: MType::Auto,
         };
     }
-    pub fn i31ref() -> Self
-    {
+    pub fn i31ref() -> Self {
         return Self {
             inner: { unsafe { BinaryenTypeI31ref() } },
             matchable_type: MType::I31Ref,
         };
     }
-    pub fn eqref() -> Self
-    {
+    pub fn eqref() -> Self {
         return Self {
             inner: { unsafe { BinaryenTypeEqref() } },
             matchable_type: MType::EqRef,
         };
     }
 
-    pub fn create(value_types: Vec<Type>) -> Self
-    {
+    pub fn create(value_types: Vec<Type>) -> Self {
         return unsafe {
             let mut inners = value_types
                 .iter()
@@ -1670,14 +1571,12 @@ impl Type
             }
         };
     }
-    pub fn arity(&mut self) -> u32
-    {
+    pub fn arity(&mut self) -> u32 {
         unsafe { BinaryenTypeArity(self.inner) }
     }
 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Features
-{
+pub struct Features {
     inner: BinaryenFeatures,
 }
 
@@ -1699,14 +1598,12 @@ pub struct Features
 */
 macro_rules! impl_feature {
     ($name: ident, $check: ident) => {
-        pub fn $name() -> i32
-        {
+        pub fn $name() -> i32 {
             return unsafe { $check() } as i32;
         }
     };
 }
-impl Features
-{
+impl Features {
     impl_feature!(mvp, BinaryenFeatureMVP);
     impl_feature!(atomics, BinaryenFeatureAtomics);
     impl_feature!(bulk_memory, BinaryenFeatureBulkMemory);
@@ -1722,863 +1619,1175 @@ impl Features
     impl_feature!(memory_64, BinaryenFeatureMemory64);
     impl_feature!(feature_all, BinaryenFeatureAll);
 }
-pub struct EventRef
-{
+pub struct EventRef {
     pub inner: BinaryenEventRef,
 }
-impl EventRef
-{
-    fn new(e: BinaryenEventRef) -> Self
-    {
+impl EventRef {
+    fn new(e: BinaryenEventRef) -> Self {
         Self { inner: e }
     }
 }
 
-pub struct FunctionRef
-{
+pub struct FunctionRef {
     inner: BinaryenFunctionRef,
 }
-impl FunctionRef
-{
-    fn new(e: BinaryenFunctionRef) -> Self
-    {
+impl FunctionRef {
+    fn new(e: BinaryenFunctionRef) -> Self {
         Self { inner: e }
     }
-    pub fn get_name(&self) -> &str
-    {
+    pub fn get_name(&self) -> &str {
         let c_buf = unsafe { BinaryenFunctionGetName(self.inner) };
         let c_str = unsafe { std::ffi::CStr::from_ptr(c_buf) };
         c_str.to_str().unwrap()
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
-    #![allow(dead_code, unused_variables, non_camel_case_types, non_upper_case_globals, non_snake_case,)]
+    #![allow(
+        dead_code,
+        unused_variables,
+        non_camel_case_types,
+        non_upper_case_globals,
+        non_snake_case
+    )]
 
-use std::convert::TryInto;
-use crate::*;
-// use *;
-lazy_static! {
-    static ref v128_byes: Vec<i128> = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-}
-fn make_unary(module: &mut Module, op: Op, input_type: Type) -> ExpressionRef {
-    let c = match input_type.matchable_type {
-        MType::I32 => module.make_const(Literal::int_32(-10)),
-        MType::I64 => module.make_const(Literal::int_64(-22)),
-        MType::F32 => module.make_const(Literal::float_32(-33.612f32)),
-        MType::F64 => module.make_const(Literal::float_64(-9005.841f64)),
-        _ => {
-            panic!();
+    use crate::*;
+    use std::convert::TryInto;
+    // use *;
+    lazy_static! {
+        static ref v128_byes: Vec<i128> =
+            vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+    }
+    fn make_unary(module: &mut Module, op: Op, input_type: Type) -> ExpressionRef {
+        let c = match input_type.matchable_type {
+            MType::I32 => module.make_const(Literal::int_32(-10)),
+            MType::I64 => module.make_const(Literal::int_64(-22)),
+            MType::F32 => module.make_const(Literal::float_32(-33.612f32)),
+            MType::F64 => module.make_const(Literal::float_64(-9005.841f64)),
+            _ => {
+                panic!();
+            }
+        };
+        module.unary(op, c)
+        // let c = if input_type == Type::int_32() {
+        //     module.make_const(Literal::int_32(-10))
+        // } else if input_type == Type::int_64() {
+        //     module.make_const(Literal::int_64(-22))
+        // } else if input_type == Type::float_32() {
+        //     module.make_const(Literal::float_32(-33.612f32))
+        // } else if input_type == Type::float_64() {
+        //     module.make_const(Literal::float_64(-9005.841f64))
+        // } else {
+        //     //TODO: Add vec128
+        //     // TODO: allow matching expressions so that I dont need this trailing else statement
+        //     module.make_const(Literal::int_32(-0))
+        // };
+        // module.unary(op, c)
+    }
+
+    fn make_binary(module: &mut Module, op: Op, input_type: Type) -> ExpressionRef {
+        if input_type == Type::int_32() {
+            let temp = module.make_const(Literal::int_32(-11));
+            // Rust limitation, Cannot borrow `module` as mutable more than once in the same line.
+            let l = module.make_const(Literal::int_32(-10));
+            return module.binary(op, l, temp);
+        } else if input_type == Type::int_64() {
+            let temp = module.make_const(Literal::int_64(-23));
+            let l = module.make_const(Literal::int_64(-22));
+            return module.binary(op, l, temp);
+        } else if input_type == Type::float_32() {
+            let temp = module.make_const(Literal::float_32(-65.5f32));
+            let l = module.make_const(Literal::float_32(-33.612f32));
+            return module.binary(op, l, temp);
+        } else if input_type == Type::float_64() {
+            let temp = module.make_const(Literal::float_64(-9007.333f64));
+            let l = module.make_const(Literal::float_64(-9005.841f64));
+            return module.binary(op, l, temp);
+        } else {
+            // TODO: allow matching expressions so that I dont need this trailing else statement
+            let temp = module.make_const(Literal::int_32(-0));
+            let l = module.make_const(Literal::int_32(-0));
+            return module.binary(op, l, temp);
         }
-    };
-    module.unary(op, c)
-    // let c = if input_type == Type::int_32() {
-    //     module.make_const(Literal::int_32(-10))
-    // } else if input_type == Type::int_64() {
-    //     module.make_const(Literal::int_64(-22))
-    // } else if input_type == Type::float_32() {
-    //     module.make_const(Literal::float_32(-33.612f32))
-    // } else if input_type == Type::float_64() {
-    //     module.make_const(Literal::float_64(-9005.841f64))
-    // } else {
-    //     //TODO: Add vec128
-    //     // TODO: allow matching expressions so that I dont need this trailing else statement
-    //     module.make_const(Literal::int_32(-0))
-    // };
-    // module.unary(op, c)
-}
-
-fn make_binary(module: &mut Module, op: Op, input_type: Type) -> ExpressionRef {
-    if input_type == Type::int_32() {
-        let temp = module.make_const(Literal::int_32(-11));
-        // Rust limitation, Cannot borrow `module` as mutable more than once in the same line.
-        let l = module.make_const(Literal::int_32(-10));
-        return module.binary(op, l, temp);
-    } else if input_type == Type::int_64() {
-        let temp = module.make_const(Literal::int_64(-23));
-        let l = module.make_const(Literal::int_64(-22));
-        return module.binary(op, l, temp);
-    } else if input_type == Type::float_32() {
-        let temp = module.make_const(Literal::float_32(-65.5f32));
-        let l = module.make_const(Literal::float_32(-33.612f32));
-        return module.binary(op, l, temp);
-    } else if input_type == Type::float_64() {
-        let temp = module.make_const(Literal::float_64(-9007.333f64));
-        let l = module.make_const(Literal::float_64(-9005.841f64));
-        return module.binary(op, l, temp);
-    } else {
-        // TODO: allow matching expressions so that I dont need this trailing else statement
-        let temp = module.make_const(Literal::int_32(-0));
-        let l = module.make_const(Literal::int_32(-0));
-        return module.binary(op, l, temp);
-    }
-}
-
-fn make_int_32(module: &mut Module, x: i32) -> ExpressionRef {
-    module.make_const(Literal::int_32(x))
-}
-fn make_int_64(module: &mut Module, x: i64) -> ExpressionRef {
-    module.make_const(Literal::int_64(x))
-}
-fn make_float_32(module: &mut Module, x: f32) -> ExpressionRef {
-    module.make_const(Literal::float_32(x))
-}
-fn make_float_64(module: &mut Module, x: f64) -> ExpressionRef {
-    module.make_const(Literal::float_64(x))
-}
-fn make_something(module: &mut Module) -> ExpressionRef {
-    make_int_32(module, 1337)
-}
-fn make_dropped_int_32(module: &mut Module, x: i32) -> ExpressionRef {
-    let c = module.make_const(Literal::int_32(x));
-    module.drop_var(c)
-}
-//TODO: Simd
-fn make_memory_init(module: &mut Module) -> ExpressionRef {
-    let dest = make_int_32(module, 1024);
-    let offset = make_int_32(module, 0);
-    let size = make_int_32(module, 12);
-    module.memory_init(0, dest, offset, size)
-}
-fn make_data_drop(module: &mut Module) -> ExpressionRef {
-    module.data_drop(0)
-}
-
-fn make_memory_copy(module: &mut Module) -> ExpressionRef {
-    let dest = make_int_32(module, 2048);
-    let source = make_int_32(module, 1024);
-    let size = make_int_32(module, 12);
-    module.memory_copy(dest, source, size)
-}
-fn make_memory_fill(module: &mut Module) -> ExpressionRef {
-    let dest = make_int_32(module, 2048);
-    let source = make_int_32(module, 1024);
-    let size = make_int_32(module, 12);
-    module.memory_fill(dest, source, size)
-}
-#[test]
-fn test_types() {
-    //TODO like 152 - 158 example
-    //TODO: add expanding example
-    {
-        let mut unreachable = Type::unreachable();
-        println!("  // BinaryenTypeUnreachable: {:?}\n", unreachable);
-        assert!(unreachable.arity() == 1);
-    }
-    {
-        let mut i32_ = Type::int_32();
-        println!("  // BinaryenTypeInt32: {:?}\n", i32_);
-        assert!(i32_.arity() == 1);
     }
 
-    {
-        let mut i64_ = Type::int_64();
-        println!("  // BinaryenTypeInt64: {:?}\n", i64_);
-        assert!(i64_.arity() == 1);
+    fn make_int_32(module: &mut Module, x: i32) -> ExpressionRef {
+        module.make_const(Literal::int_32(x))
     }
-    {
-        let mut f32_ = Type::float_32();
-        println!("  // BinaryenTypeFloat32: {:?}", f32_);
-        assert!(f32_.arity() == 1);
+    fn make_int_64(module: &mut Module, x: i64) -> ExpressionRef {
+        module.make_const(Literal::int_64(x))
     }
-    {
-        let mut f64_ = Type::float_32();
-        println!("  // BinaryenTypeFloat64: {:?}", f64_);
-        assert!(f64_.arity() == 1);
+    fn make_float_32(module: &mut Module, x: f32) -> ExpressionRef {
+        module.make_const(Literal::float_32(x))
     }
-    //TODO: Add v128 test
-    {
-        let mut funcref = Type::funcref();
-        println!("  // BinaryenTypeFuncref: {:?}", funcref);
-        assert!(funcref.arity() == 1);
+    fn make_float_64(module: &mut Module, x: f64) -> ExpressionRef {
+        module.make_const(Literal::float_64(x))
     }
-    {
-        let mut externref = Type::externref();
-        println!("  // BinaryenTypeExternref: {:?}", externref);
-        assert!(externref.arity() == 1);
+    fn make_something(module: &mut Module) -> ExpressionRef {
+        make_int_32(module, 1337)
     }
-    {
-        let mut exnref = Type::exnref();
-        println!("  // BinaryenTypeExnreff: {:?}", exnref);
-        assert!(exnref.arity() == 1);
+    fn make_dropped_int_32(module: &mut Module, x: i32) -> ExpressionRef {
+        let c = module.make_const(Literal::int_32(x));
+        module.drop_var(c)
     }
-    //TODO Eqref, and i31ref has bindings at line 105 binaryen-c.h, but its not in bindings.rs
-    {
-        let mut eqref = Type::eqref();
-        println!("  // BinaryenTypeEqref: {:?}\n", eqref);
-        assert!(eqref.arity() == 1);
+    //TODO: Simd
+    fn make_memory_init(module: &mut Module) -> ExpressionRef {
+        let dest = make_int_32(module, 1024);
+        let offset = make_int_32(module, 0);
+        let size = make_int_32(module, 12);
+        module.memory_init(0, dest, offset, size)
+    }
+    fn make_data_drop(module: &mut Module) -> ExpressionRef {
+        module.data_drop(0)
     }
 
-    let mut i31ref = Type::i31ref();
-    println!("  // BinaryenTypeI31Ref: {:?}\n", i31ref);
-    assert!(i31ref.arity() == 1);
-
-    {
-        println!("  // BinaryenTypeAuto: {:?}", Type::auto())
+    fn make_memory_copy(module: &mut Module) -> ExpressionRef {
+        let dest = make_int_32(module, 2048);
+        let source = make_int_32(module, 1024);
+        let size = make_int_32(module, 12);
+        module.memory_copy(dest, source, size)
     }
-    {
-        let i32_0 = Type::int_32();
-        let i32_1 = Type::int_32();
-
-        let pair = vec![i32_0, i32_1];
-        let mut i32_pair = Type::create(pair.clone());
-        assert!(i32_pair.arity() == 2);
-        //TODO: expand ln 239
-
-        let duplicate_pair = Type::create(pair);
-        assert!(duplicate_pair == i32_pair);
-        let pair = vec![Type::float_32(), Type::float_32()];
-        let float_pair = Type::create(pair);
-        assert!(float_pair != i32_pair);
+    fn make_memory_fill(module: &mut Module) -> ExpressionRef {
+        let dest = make_int_32(module, 2048);
+        let source = make_int_32(module, 1024);
+        let size = make_int_32(module, 12);
+        module.memory_fill(dest, source, size)
     }
-}
-#[test]
-fn test_features() {
-    assert_eq!(Features::mvp(), 0);
-    assert_eq!(Features::atomics(), 1);
-    assert_eq!(Features::bulk_memory(), 16);
-    assert_eq!(Features::mutable_globals(), 2);
-    assert_eq!(Features::non_trapping_fp_to_int(), 4);
-    assert_eq!(Features::sign_ext(), 32);
-    assert_eq!(Features::simd_128(), 8);
-    assert_eq!(Features::exception_handling(), 64);
-    assert_eq!(Features::tail_call(), 128);
-    assert_eq!(Features::reference_types(), 256);
-    assert_eq!(Features::multi_value(), 512);
-    assert_eq!(Features::gc(), 1024);
-    assert_eq!(Features::feature_all(), 4095);
+    #[test]
+    fn test_types() {
+        //TODO like 152 - 158 example
+        //TODO: add expanding example
+        {
+            let mut unreachable = Type::unreachable();
+            println!("  // BinaryenTypeUnreachable: {:?}\n", unreachable);
+            assert!(unreachable.arity() == 1);
+        }
+        {
+            let mut i32_ = Type::int_32();
+            println!("  // BinaryenTypeInt32: {:?}\n", i32_);
+            assert!(i32_.arity() == 1);
+        }
 
-    //     println!("BinaryenFeatureMVP: {:?}", Features::mvp());
-    //     println!("BinaryenFeatureAtomics: {:?}", Features::atomics());
-    //     println!("BinaryenFeatureBulkMemory: {:?}", Features::bulk_memory());
-}
-#[test]
-fn test_core() {
-    let mut module = Module::new();
-    let (ConstI32, ConstI64, ConstF32, ConstF64, ConstF32Bits, ConstF64Bits) = (
-        module.make_const(Literal::int_32(1)),
-        module.make_const(Literal::int_64(2)),
-        module.make_const(Literal::float_32(3.14f32)),
-        module.make_const(Literal::float_64(2.1824f64)),
-        module.make_const(Literal::float_32_bits(0xffff123)), //TODO: Figure out why this cant be 0xffff1234 like in the example (ln 279)
-        module.make_const(Literal::float_64_bits(0xffff1234456abcdi64)),
-    );
-    let switch_value_names = vec!["the-value"];
-    let switch_body_names = vec!["the-nothing"];
+        {
+            let mut i64_ = Type::int_64();
+            println!("  // BinaryenTypeInt64: {:?}\n", i64_);
+            assert!(i64_.arity() == 1);
+        }
+        {
+            let mut f32_ = Type::float_32();
+            println!("  // BinaryenTypeFloat32: {:?}", f32_);
+            assert!(f32_.arity() == 1);
+        }
+        {
+            let mut f64_ = Type::float_32();
+            println!("  // BinaryenTypeFloat64: {:?}", f64_);
+            assert!(f64_.arity() == 1);
+        }
+        //TODO: Add v128 test
+        {
+            let mut funcref = Type::funcref();
+            println!("  // BinaryenTypeFuncref: {:?}", funcref);
+            assert!(funcref.arity() == 1);
+        }
+        {
+            let mut externref = Type::externref();
+            println!("  // BinaryenTypeExternref: {:?}", externref);
+            assert!(externref.arity() == 1);
+        }
+        {
+            let mut exnref = Type::exnref();
+            println!("  // BinaryenTypeExnreff: {:?}", exnref);
+            assert!(exnref.arity() == 1);
+        }
+        //TODO Eqref, and i31ref has bindings at line 105 binaryen-c.h, but its not in bindings.rs
+        {
+            let mut eqref = Type::eqref();
+            println!("  // BinaryenTypeEqref: {:?}\n", eqref);
+            assert!(eqref.arity() == 1);
+        }
 
-    let call_operands2 = vec![make_int_32(&mut module, 13), make_float_64(&mut module, 3.7)];
-    let call_operands4 = vec![make_int_32(&mut module, 13), make_int_64(&mut module, 37), make_float_32(&mut module, 1.3f32), make_float_64(&mut module, 3.7)];
-    let call_operands4b = vec![make_int_32(&mut module, 13), make_int_64(&mut module, 37), make_float_32(&mut module, 1.3f32), make_float_64(&mut module, 3.7)];
-    let tuple_elements4a = vec![make_int_32(&mut module, 13), make_int_64(&mut module, 37), make_float_32(&mut module, 1.3f32), make_float_64(&mut module, 3.7f64)];
+        let mut i31ref = Type::i31ref();
+        println!("  // BinaryenTypeI31Ref: {:?}\n", i31ref);
+        assert!(i31ref.arity() == 1);
 
-    let iIfF = vec![Type::int_32(), Type::int_64(), Type::float_32(), Type::float_64()];
+        {
+            println!("  // BinaryenTypeAuto: {:?}", Type::auto())
+        }
+        {
+            let i32_0 = Type::int_32();
+            let i32_1 = Type::int_32();
 
-    let iIfF = Type::create(iIfF);
+            let pair = vec![i32_0, i32_1];
+            let mut i32_pair = Type::create(pair.clone());
+            assert!(i32_pair.arity() == 2);
+            //TODO: expand ln 239
 
-    let (temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8, temp9, temp10, temp11, temp12, temp13, temp14, temp15, temp16) = (
-        make_int_32(&mut module, 1),
-        make_int_32(&mut module, 2),
-        make_int_32(&mut module, 3),
-        make_int_32(&mut module, 4),
-        make_int_32(&mut module, 5),
-        make_int_32(&mut module, 0),
-        make_int_32(&mut module, 1),
-        make_int_32(&mut module, 0),
-        make_int_32(&mut module, 1),
-        make_int_32(&mut module, 1),
-        make_int_32(&mut module, 3),
-        make_int_32(&mut module, 5),
-        make_int_32(&mut module, 10),
-        make_int_32(&mut module, 11),
-        make_int_32(&mut module, 110),
-        make_int_64(&mut module, 111),
-    );
-    let externrefExpr = module.ref_null(Type::externref());
-    let mut funcrefExpr = module.ref_null(Type::funcref());
-    funcrefExpr = module.ref_func("kitchen()sinker");
-    let exnref = module.ref_null(Type::exnref());
-    let i31ref = {
-        let temp = make_int_32(&mut module, 1);
-        module.make_i31(temp)
-    };
+            let duplicate_pair = Type::create(pair);
+            assert!(duplicate_pair == i32_pair);
+            let pair = vec![Type::float_32(), Type::float_32()];
+            let float_pair = Type::create(pair);
+            assert!(float_pair != i32_pair);
+        }
+    }
+    #[test]
+    fn test_features() {
+        assert_eq!(Features::mvp(), 0);
+        assert_eq!(Features::atomics(), 1);
+        assert_eq!(Features::bulk_memory(), 16);
+        assert_eq!(Features::mutable_globals(), 2);
+        assert_eq!(Features::non_trapping_fp_to_int(), 4);
+        assert_eq!(Features::sign_ext(), 32);
+        assert_eq!(Features::simd_128(), 8);
+        assert_eq!(Features::exception_handling(), 64);
+        assert_eq!(Features::tail_call(), 128);
+        assert_eq!(Features::reference_types(), 256);
+        assert_eq!(Features::multi_value(), 512);
+        assert_eq!(Features::gc(), 1024);
+        assert_eq!(Features::feature_all(), 4095);
 
-    //Events
-    module.add_event("a-event", 0, Type::int_32(), Type::none());
+        //     println!("BinaryenFeatureMVP: {:?}", Features::mvp());
+        //     println!("BinaryenFeatureAtomics: {:?}", Features::atomics());
+        //     println!("BinaryenFeatureBulkMemory: {:?}", Features::bulk_memory());
+    }
+    #[test]
+    fn test_core() {
+        let mut module = Module::new();
+        let (ConstI32, ConstI64, ConstF32, ConstF64, ConstF32Bits, ConstF64Bits) = (
+            module.make_const(Literal::int_32(1)),
+            module.make_const(Literal::int_64(2)),
+            module.make_const(Literal::float_32(3.14f32)),
+            module.make_const(Literal::float_64(2.1824f64)),
+            module.make_const(Literal::float_32_bits(0xffff123)), //TODO: Figure out why this cant be 0xffff1234 like in the example (ln 279)
+            module.make_const(Literal::float_64_bits(0xffff1234456abcdi64)),
+        );
+        let switch_value_names = vec!["the-value"];
+        let switch_body_names = vec!["the-nothing"];
 
-    let try_body = {
-        let temp = vec![make_int_32(&mut module, 0)];
-        module.throw("a-event", temp)
-    };
+        let call_operands2 = vec![
+            make_int_32(&mut module, 13),
+            make_float_64(&mut module, 3.7),
+        ];
+        let call_operands4 = vec![
+            make_int_32(&mut module, 13),
+            make_int_64(&mut module, 37),
+            make_float_32(&mut module, 1.3f32),
+            make_float_64(&mut module, 3.7),
+        ];
+        let call_operands4b = vec![
+            make_int_32(&mut module, 13),
+            make_int_64(&mut module, 37),
+            make_float_32(&mut module, 1.3f32),
+            make_float_64(&mut module, 3.7),
+        ];
+        let tuple_elements4a = vec![
+            make_int_32(&mut module, 13),
+            make_int_64(&mut module, 37),
+            make_float_32(&mut module, 1.3f32),
+            make_float_64(&mut module, 3.7f64),
+        ];
 
-    //TODO: Clean this up and put comments
-    let catch_body = {
-        // We have t ostart from the inside, so
-        /*
-          (BinaryenExpressionRef[]){
-        BinaryenLocalSet(module, 5, BinaryenPop(module, BinaryenTypeExnref())),
-        BinaryenDrop(
-          module,
-          BinaryenBlock(module,
-                        "try-block",
-                        (BinaryenExpressionRef[]){BinaryenRethrow(
-                          module,
-                          BinaryenBrOnExn(
-                            module,
+        let iIfF = vec![
+            Type::int_32(),
+            Type::int_64(),
+            Type::float_32(),
+            Type::float_64(),
+        ];
+
+        let iIfF = Type::create(iIfF);
+
+        let (
+            temp1,
+            temp2,
+            temp3,
+            temp4,
+            temp5,
+            temp6,
+            temp7,
+            temp8,
+            temp9,
+            temp10,
+            temp11,
+            temp12,
+            temp13,
+            temp14,
+            temp15,
+            temp16,
+        ) = (
+            make_int_32(&mut module, 1),
+            make_int_32(&mut module, 2),
+            make_int_32(&mut module, 3),
+            make_int_32(&mut module, 4),
+            make_int_32(&mut module, 5),
+            make_int_32(&mut module, 0),
+            make_int_32(&mut module, 1),
+            make_int_32(&mut module, 0),
+            make_int_32(&mut module, 1),
+            make_int_32(&mut module, 1),
+            make_int_32(&mut module, 3),
+            make_int_32(&mut module, 5),
+            make_int_32(&mut module, 10),
+            make_int_32(&mut module, 11),
+            make_int_32(&mut module, 110),
+            make_int_64(&mut module, 111),
+        );
+        let externrefExpr = module.ref_null(Type::externref());
+        let mut funcrefExpr = module.ref_null(Type::funcref());
+        funcrefExpr = module.ref_func("kitchen()sinker");
+        let exnref = module.ref_null(Type::exnref());
+        let i31ref = {
+            let temp = make_int_32(&mut module, 1);
+            module.make_i31(temp)
+        };
+
+        //Events
+        module.add_event("a-event", 0, Type::int_32(), Type::none());
+
+        let try_body = {
+            let temp = vec![make_int_32(&mut module, 0)];
+            module.throw("a-event", temp)
+        };
+
+        //TODO: Clean this up and put comments
+        let catch_body = {
+            // We have t ostart from the inside, so
+            /*
+              (BinaryenExpressionRef[]){
+            BinaryenLocalSet(module, 5, BinaryenPop(module, BinaryenTypeExnref())),
+            BinaryenDrop(
+              module,
+              BinaryenBlock(module,
                             "try-block",
-                            "a-event",
-                            BinaryenLocalGet(module, 5, BinaryenTypeExnref())))},
-                        1,
-                        BinaryenTypeInt32()))}
-                        */
-        let popped = module.pop(Type::exnref());
-        let lg = module.get_local(5, Type::exnref());
-        // lg.print();
-        let b = module.br_on_exn("try-block", "a-event", lg);
-        let try_children = vec![module.rethrow(b)];
-        let try_blk = module.new_block("try-block", try_children, Type::int_32());
-        let mut children = vec![module.set_local(5, popped), module.drop_var(try_blk)];
+                            (BinaryenExpressionRef[]){BinaryenRethrow(
+                              module,
+                              BinaryenBrOnExn(
+                                module,
+                                "try-block",
+                                "a-event",
+                                BinaryenLocalGet(module, 5, BinaryenTypeExnref())))},
+                            1,
+                            BinaryenTypeInt32()))}
+                            */
+            let popped = module.pop(Type::exnref());
+            let lg = module.get_local(5, Type::exnref());
+            // lg.print();
+            let b = module.br_on_exn("try-block", "a-event", lg);
+            let try_children = vec![module.rethrow(b)];
+            let try_blk = module.new_block("try-block", try_children, Type::int_32());
+            let mut children = vec![module.set_local(5, popped), module.drop_var(try_blk)];
 
-        let catch_body = module.new_nameless_block(children, Type::none());
-        catch_body
+            let catch_body = module.new_nameless_block(children, Type::none());
+            catch_body
 
-        // let pop = module.pop(Type::exnref());
+            // let pop = module.pop(Type::exnref());
 
-        // let loca = module.get_local(5, Type::exnref());
-        // let try_block_children = vec![module.br_on_exn("try-block", "a-event", loca)];
-        // let blk = module.new_block("try-block", try_block_children, Type::int_32());
-        // let mut children = vec![module.set_local(5, pop, ), module.drop_var(blk)];
-        // // children.push();
-        // module.new_nameless_block(children, Type::none())
-    };
-
-    let i32_ = Type::int_32();
-    let i64_ = Type::int_64();
-    let f32_ = Type::float_32();
-    let f64_ = Type::float_64();
-    macro_rules! binop {
-        ($name: ident, $type: ident) => {
-            make_binary(&mut module, Op::$name(), $type)
+            // let loca = module.get_local(5, Type::exnref());
+            // let try_block_children = vec![module.br_on_exn("try-block", "a-event", loca)];
+            // let blk = module.new_block("try-block", try_block_children, Type::int_32());
+            // let mut children = vec![module.set_local(5, pop, ), module.drop_var(blk)];
+            // // children.push();
+            // module.new_nameless_block(children, Type::none())
         };
-    }
-    macro_rules! unop {
-        ($name: ident, $type: ident) => {
-            make_unary(&mut module, Op::$name(), $type)
+
+        let i32_ = Type::int_32();
+        let i64_ = Type::int_64();
+        let f32_ = Type::float_32();
+        let f64_ = Type::float_64();
+        macro_rules! binop {
+            ($name: ident, $type: ident) => {
+                make_binary(&mut module, Op::$name(), $type)
+            };
+        }
+        macro_rules! unop {
+            ($name: ident, $type: ident) => {
+                make_unary(&mut module, Op::$name(), $type)
+            };
+        }
+        let mut value_list = vec![
+            unop!(clz_int32, i32_),
+            unop!(ctz_int32, i32_),
+            // //TODO: Fill the rest of the operators in
+            binop!(add_int32, i32_),
+            binop![add_int64, i64_],
+            make_memory_init(&mut module),
+            make_data_drop(&mut module),
+            make_memory_copy(&mut module),
+            make_memory_fill(&mut module),
+            module.r#if(temp1, temp2, temp3),
+            module.r#if(temp4, temp5, ExpressionRef::null_expr()),
+            {
+                let temp = make_int_32(&mut module, 0);
+                module.r#loop("in", temp)
+            },
+            {
+                let temp = make_int_32(&mut module, 0);
+                module.r#loop("z", temp)
+            },
+            module.r#break("the-value", Some(temp6), Some(temp7)),
+            {
+                let temp = make_int_32(&mut module, 2);
+                module.r#break("the-nothing", Some(temp), None)
+            },
+            {
+                let temp = make_int_32(&mut module, 2);
+                module.r#break("the-nothing", Some(temp), None)
+            },
+            {
+                let temp = make_int_32(&mut module, 3);
+                module.r#break("the-value", None, Some(temp))
+            },
+            {
+                // let temp = make_int_32(&mut module, 3);
+                module.r#break("the-nothing", None, None)
+            },
+            module.switch(switch_value_names, "the-value", temp8, temp9),
+            {
+                let temp = make_int_32(&mut module, 2);
+                module.switch(
+                    switch_body_names,
+                    "the-nothing",
+                    temp,
+                    ExpressionRef::null_expr(),
+                )
+            },
+            {
+                let val = module.r#call("kitchen()sinker", call_operands4, Type::int_32());
+                module.unary(Op::eq_z_int32(), val)
+            },
+            {
+                let v = module.r#call("an-imported", call_operands2, Type::float_32());
+                let val = module.unary(Op::trunc_s_float32_to_int32(), v);
+                module.unary(Op::eq_z_int32(), val)
+            },
+            {
+                let m = make_int_32(&mut module, 2449);
+                let indirectly_called =
+                    module.call_indirect(m, call_operands4b, iIfF, Type::int_32());
+                module.unary(Op::eq_z_int32(), indirectly_called)
+            },
+            {
+                let l0 = module.get_local(0, Type::int_32());
+                module.drop_var(l0)
+            },
+            {
+                let i = make_int_32(&mut module, 101);
+                module.set_local(0, i)
+            },
+            {
+                let i = make_int_32(&mut module, 102);
+                module.tee_local(0, i, Type::int_32())
+            },
+            {
+                //    BinaryenLoad(module, 4, 0, 0, 0, BinaryenTypeInt32(), makeInt32(module, 1)),
+                let i = make_int_32(&mut module, 1);
+                module.load(4, 0, 0, 0, Type::int_32(), i)
+            },
+            {
+                //       BinaryenLoad(module, 2, 1, 2, 1, BinaryenTypeInt64(), makeInt32(module, 8)),
+                let i = make_int_32(&mut module, 8);
+                module.load(2, 1, 2, 1, Type::int_64(), i)
+            },
+            {
+                //            module, 4, 0, 0, 0, BinaryenTypeFloat32(), makeInt32(module, 2)),
+                let i = make_int_32(&mut module, 2);
+                module.load(4, 0, 0, 0, Type::float_32(), i)
+            },
+            {
+                //BinaryenLoad( module, 8, 0, 2, 8, BinaryenTypeFloat64(), makeInt32(module, 9)),
+                let i = make_int_32(&mut module, 9);
+                module.load(8, 0, 2, 8, Type::float_64(), i)
+            },
+            { module.store(4, 0, 0, temp13, temp14, Type::int_32()) },
+            { module.store(8, 2, 4, temp15, temp16, Type::int_64()) },
+            { module.select(temp10, temp11, temp12, Type::auto()) },
+            {
+                let i = make_int_32(&mut module, 1337);
+                module.r#return(i)
+            },
+            {
+                //TODO, find a way around redefining call_operands4
+                let call_operands4 = vec![
+                    make_int_32(&mut module, 13),
+                    make_int_64(&mut module, 37),
+                    make_float_32(&mut module, 1.3f32),
+                    make_float_64(&mut module, 3.7),
+                ];
+                module.return_call("kitchen()sinker", call_operands4, Type::int_32())
+            },
+            {
+                let call_operands4b = vec![
+                    make_int_32(&mut module, 13),
+                    make_int_64(&mut module, 37),
+                    make_float_32(&mut module, 1.3f32),
+                    make_float_64(&mut module, 3.7),
+                ];
+                let target = make_int_32(&mut module, 2499);
+                module.return_call_indirect(target, call_operands4b, iIfF, Type::int_32())
+                // call_operands4b,
+            },
+            //Reference types
+            { module.ref_is_null(externrefExpr) },
+            { module.ref_is_null(funcrefExpr) },
+            { module.ref_is_null(exnref) },
+            {
+                let t = module.ref_null(Type::funcref());
+                let f = module.ref_func("kitchen()sinker");
+                module.select(temp10, t, f, Type::funcref())
+            },
+            //Gc
+            {
+                let l = module.ref_null(Type::eqref());
+                let r = module.ref_null(Type::eqref());
+
+                module.ref_eq(l, r)
+            },
+            //TODO: Exception handleing test
+            //Exception handling
+            // { module.r#try(try_body, catch_body) },
+            //Atomics
+            {
+                let ld = module.atomic_load(4, 0, Type::int_32(), temp6);
+                module.atomic_store(4, 0, temp6, ld, Type::int_32())
+            },
+            {
+                let baw = module.atomic_wait(temp6, temp6, temp16, Type::int_32());
+                module.drop_var(baw)
+            },
+            {
+                let ban = module.atomic_notify(temp6, temp6);
+                module.drop_var(ban)
+            },
+            { module.atomic_fence() },
+            //tuples
+            { module.make_tuple(tuple_elements4a) },
+            {
+                let tuple_elements4a = vec![
+                    make_int_32(&mut module, 13),
+                    make_int_64(&mut module, 37),
+                    make_float_32(&mut module, 1.3f32),
+                    make_float_64(&mut module, 3.7f64),
+                ];
+                let made = module.make_tuple(tuple_elements4a);
+                module.extract_tuple(made, 2)
+            },
+            //pop
+            { module.pop(Type::int_32()) },
+            { module.pop(Type::int_64()) },
+            { module.pop(Type::float_32()) },
+            { module.pop(Type::float_64()) },
+            { module.pop(Type::funcref()) },
+            { module.pop(Type::externref()) },
+            { module.pop(Type::exnref()) },
+            //memory
+            { module.memory_size() },
+            {
+                let i = make_int_32(&mut module, 2);
+                module.memory_grow(i)
+            },
+            // Gc
+            {
+                let i = make_int_32(&mut module, 0);
+                module.new_i31(i)
+            },
+            { module.get_i31(i31ref, 1) },
+            {
+                let i = make_int_32(&mut module, 2);
+                let i31 = module.new_i31(i);
+                module.get_i31(i31, 0)
+            },
+            // Other
+            { module.nop() },
+            { module.unreachable() },
+        ];
+
+        value_list.get(3).unwrap().print(); // test printing a standalone expression
+                                            // Make the main body of the function. and one block with a return value, one without
+        let value = module.new_block("the-value", value_list, Type::auto());
+        let dropped_value = module.drop_var(value);
+        let nothing = module.new_block("the-nothing", vec![dropped_value], Type::none());
+        let body_list = vec![nothing, make_int_32(&mut module, 42)];
+        let body = module.new_block("the-body", body_list, Type::auto());
+        // Create the function
+        let local_types = [Type::int_32(); 2].to_vec();
+        let sinker =
+            module.add_function("kitchen()sinker", iIfF, Type::int_32(), local_types, body);
+
+        // Globals
+        {
+            let i = make_int_32(&mut module, 7);
+            module.add_global("a-global", Type::int_32(), 0, i);
+        }
+        {
+            let i = make_float_32(&mut module, 7.5f32);
+            module.add_global("a-mutable-global", Type::float_32(), 0, i);
+        }
+        // Imports
+        let iF = Type::create(vec![Type::int_32(), Type::float_64()]);
+        module.add_function_import("an-imported", "module", "base", iF, Type::float_32());
+
+        // Exports
+        module.add_function_export("kitchen()sinker", "kitchen_sinker");
+
+        // Function table. One per module
+        let func_names = vec![sinker.get_name()];
+        println!("func_names = {:#?}", func_names);
+
+        {
+            let offset = module.make_const(Literal::int_32(0));
+            module.set_function_table(1, 1, func_names, offset);
+        }
+        //Memory.  One per module
+        //TODO: Try to provide higher level api, something like abstracting away vec length.
+        // let hw = std::ffi::CString::new("hello, world").unwrap();
+        // let ip = std::ffi::CString::new("im passive").unwrap();
+        let segments = vec!["hello, world", "im passive"];
+        println!("segments = {:?}", segments);
+        // panic!();
+        let segment_passive: Vec<i8> = vec![0, 1];
+        let segment_offsets = vec![
+            module.make_const(Literal::int_32(10)),
+            ExpressionRef::null_expr(),
+        ];
+
+        let segment_sizes = vec![12, 12];
+        module.set_memory(
+            1,
+            256,
+            "exported_mem",
+            segments,
+            segment_passive,
+            segment_offsets,
+            segment_sizes,
+            true,
+        );
+
+        // Start function. One per module
+
+        let starter = {
+            let nop = module.nop();
+            module.add_function("starter", Type::none(), Type::none(), vec![], nop)
         };
-    }
-    let mut value_list = vec![
-        unop!(clz_int32, i32_),
-        unop!(ctz_int32, i32_),
-        // //TODO: Fill the rest of the operators in
-        binop!(add_int32, i32_),
-        binop![add_int64, i64_],
-        make_memory_init(&mut module),
-        make_data_drop(&mut module),
-        make_memory_copy(&mut module),
-        make_memory_fill(&mut module),
-        module.r#if(temp1, temp2, temp3),
-        module.r#if(temp4, temp5, ExpressionRef::null_expr()),
-        {
-            let temp = make_int_32(&mut module, 0);
-            module.r#loop("in", temp)
-        },
-        {
-            let temp = make_int_32(&mut module, 0);
-            module.r#loop("z", temp)
-        },
-        module.r#break("the-value", Some(temp6), Some(temp7)),
-        {
-            let temp = make_int_32(&mut module, 2);
-            module.r#break("the-nothing", Some(temp), None)
-        },
-        {
-            let temp = make_int_32(&mut module, 2);
-            module.r#break("the-nothing", Some(temp), None)
-        },
-        {
-            let temp = make_int_32(&mut module, 3);
-            module.r#break("the-value", None, Some(temp))
-        },
-        {
-            // let temp = make_int_32(&mut module, 3);
-            module.r#break("the-nothing", None, None)
-        },
-        module.switch(switch_value_names, "the-value", temp8, temp9),
-        {
-            let temp = make_int_32(&mut module, 2);
-            module.switch(switch_body_names, "the-nothing", temp, ExpressionRef::null_expr())
-        },
-        {
-            let val = module.r#call("kitchen()sinker", call_operands4, Type::int_32());
-            module.unary(Op::eq_z_int32(), val)
-        },
-        {
-            let v = module.r#call("an-imported", call_operands2, Type::float_32());
-            let val = module.unary(Op::trunc_s_float32_to_int32(), v);
-            module.unary(Op::eq_z_int32(), val)
-        },
-        {
-            let m = make_int_32(&mut module, 2449);
-            let indirectly_called = module.call_indirect(m, call_operands4b, iIfF, Type::int_32());
-            module.unary(Op::eq_z_int32(), indirectly_called)
-        },
-        {
-            let l0 = module.get_local(0, Type::int_32());
-            module.drop_var(l0)
-        },
-        {
-            let i = make_int_32(&mut module, 101);
-            module.set_local(0, i)
-        },
-        {
-            let i = make_int_32(&mut module, 102);
-            module.tee_local(0, i, Type::int_32())
-        },
-        {
-            //    BinaryenLoad(module, 4, 0, 0, 0, BinaryenTypeInt32(), makeInt32(module, 1)),
-            let i = make_int_32(&mut module, 1);
-            module.load(4, 0, 0, 0, Type::int_32(), i)
-        },
-        {
-            //       BinaryenLoad(module, 2, 1, 2, 1, BinaryenTypeInt64(), makeInt32(module, 8)),
-            let i = make_int_32(&mut module, 8);
-            module.load(2, 1, 2, 1, Type::int_64(), i)
-        },
-        {
-            //            module, 4, 0, 0, 0, BinaryenTypeFloat32(), makeInt32(module, 2)),
-            let i = make_int_32(&mut module, 2);
-            module.load(4, 0, 0, 0, Type::float_32(), i)
-        },
-        {
-            //BinaryenLoad( module, 8, 0, 2, 8, BinaryenTypeFloat64(), makeInt32(module, 9)),
-            let i = make_int_32(&mut module, 9);
-            module.load(8, 0, 2, 8, Type::float_64(), i)
-        },
-        { module.store(4, 0, 0, temp13, temp14, Type::int_32()) },
-        { module.store(8, 2, 4, temp15, temp16, Type::int_64()) },
-        { module.select(temp10, temp11, temp12, Type::auto()) },
-        {
-            let i = make_int_32(&mut module, 1337);
-            module.r#return(i)
-        },
-        {
-            //TODO, find a way around redefining call_operands4
-            let call_operands4 = vec![make_int_32(&mut module, 13), make_int_64(&mut module, 37), make_float_32(&mut module, 1.3f32), make_float_64(&mut module, 3.7)];
-            module.return_call("kitchen()sinker", call_operands4, Type::int_32())
-        },
-        {
-            let call_operands4b = vec![make_int_32(&mut module, 13), make_int_64(&mut module, 37), make_float_32(&mut module, 1.3f32), make_float_64(&mut module, 3.7)];
-            let target = make_int_32(&mut module, 2499);
-            module.return_call_indirect(target, call_operands4b, iIfF, Type::int_32())
-            // call_operands4b,
-        },
-        //Reference types
-        { module.ref_is_null(externrefExpr) },
-        { module.ref_is_null(funcrefExpr) },
-        { module.ref_is_null(exnref) },
-        {
-            let t = module.ref_null(Type::funcref());
-            let f = module.ref_func("kitchen()sinker");
-            module.select(temp10, t, f, Type::funcref())
-        },
-        //Gc
-        {
-            let l = module.ref_null(Type::eqref());
-            let r = module.ref_null(Type::eqref());
 
-            module.ref_eq(l, r)
-        },
-        //TODO: Exception handleing test
-        //Exception handling
-        // { module.r#try(try_body, catch_body) },
-        //Atomics
-        {
-            let ld = module.atomic_load(4, 0, Type::int_32(), temp6);
-            module.atomic_store(4, 0, temp6, ld, Type::int_32())
-        },
-        {
-            let baw = module.atomic_wait(temp6, temp6, temp16, Type::int_32());
-            module.drop_var(baw)
-        },
-        {
-            let ban = module.atomic_notify(temp6, temp6);
-            module.drop_var(ban)
-        },
-        { module.atomic_fence() },
-        //tuples
-        { module.make_tuple(tuple_elements4a) },
-        {
-            let tuple_elements4a = vec![make_int_32(&mut module, 13), make_int_64(&mut module, 37), make_float_32(&mut module, 1.3f32), make_float_64(&mut module, 3.7f64)];
-            let made = module.make_tuple(tuple_elements4a);
-            module.extract_tuple(made, 2)
-        },
-        //pop
-        { module.pop(Type::int_32()) },
-        { module.pop(Type::int_64()) },
-        { module.pop(Type::float_32()) },
-        { module.pop(Type::float_64()) },
-        { module.pop(Type::funcref()) },
-        { module.pop(Type::externref()) },
-        { module.pop(Type::exnref()) },
-        //memory
-        { module.memory_size() },
-        {
-            let i = make_int_32(&mut module, 2);
-            module.memory_grow(i)
-        },
-        // Gc
-        {
-            let i = make_int_32(&mut module, 0);
-            module.new_i31(i)
-        },
-        { module.get_i31(i31ref, 1) },
-        {
-            let i = make_int_32(&mut module, 2);
-            let i31 = module.new_i31(i);
-            module.get_i31(i31, 0)
-        },
-        // Other
-        { module.nop() },
-        { module.unreachable() },
-    ];
+        module.set_start(starter);
 
-    value_list.get(3).unwrap().print(); // test printing a standalone expression
-                                        // Make the main body of the function. and one block with a return value, one without
-    let value = module.new_block("the-value", value_list, Type::auto());
-    let dropped_value = module.drop_var(value);
-    let nothing = module.new_block("the-nothing", vec![dropped_value], Type::none());
-    let body_list = vec![nothing, make_int_32(&mut module, 42)];
-    let body = module.new_block("the-body", body_list, Type::auto());
-    // Create the function
-    let local_types = [Type::int_32(); 2].to_vec();
-    let sinker = module.add_function("kitchen()sinker", iIfF, Type::int_32(), local_types, body);
+        // A bunch of our code needs drop(), auto-add it
+        module.auto_drop();
+        let features = Features::feature_all();
+        module.set_features(features);
+        //TODO assert module.get_featres() == features
 
-    // Globals
-    {
-        let i = make_int_32(&mut module, 7);
-        module.add_global("a-global", Type::int_32(), 0, i);
-    }
-    {
-        let i = make_float_32(&mut module, 7.5f32);
-        module.add_global("a-mutable-global", Type::float_32(), 0, i);
-    }
-    // Imports
-    let iF = Type::create(vec![Type::int_32(), Type::float_64()]);
-    module.add_function_import("an-imported", "module", "base", iF, Type::float_32());
+        module.print();
 
-    // Exports
-    module.add_function_export("kitchen()sinker", "kitchen_sinker");
-
-    // Function table. One per module
-    let func_names = vec![sinker.get_name()];
-    println!("func_names = {:#?}", func_names);
-
-    {
-        let offset = module.make_const(Literal::int_32(0));
-        module.set_function_table(1, 1, func_names, offset);
-    }
-    //Memory.  One per module
-    //TODO: Try to provide higher level api, something like abstracting away vec length.
-    // let hw = std::ffi::CString::new("hello, world").unwrap();
-    // let ip = std::ffi::CString::new("im passive").unwrap();
-    let segments = vec!["hello, world", "im passive"];
-    println!("segments = {:?}", segments);
-    // panic!();
-    let segment_passive: Vec<i8> = vec![0, 1];
-    let segment_offsets = vec![module.make_const(Literal::int_32(10)), ExpressionRef::null_expr()];
-
-    let segment_sizes = vec![12, 12];
-    module.set_memory(1, 256, "exported_mem", segments, segment_passive, segment_offsets, segment_sizes, true);
-
-    // Start function. One per module
-
-    let starter = {
-        let nop = module.nop();
-        module.add_function("starter", Type::none(), Type::none(), vec![], nop)
-    };
-
-    module.set_start(starter);
-
-    // A bunch of our code needs drop(), auto-add it
-    module.auto_drop();
-    let features = Features::feature_all();
-    module.set_features(features);
-    //TODO assert module.get_featres() == features
-
-    module.print();
-
-    assert!(module.validate());
-    //Module is implicitly droped here v (see `module.drop`)
-} // <--------------------------------/
-#[test]
-pub fn test_unreachable() {
-    let mut module = Module::new();
-    let unr = module.unreachable();
-    let body = module.call_indirect(unr, vec![], Type::none(), Type::int_64());
-    let fn_ = module.add_function("unreachable-fn", Type::none(), Type::none(), vec![], body);
-    assert!(module.validate());
-    module.print();
-    //Module is implicitly disposed
-}
-
-pub fn make_call_check(module: &mut Module, x: i32) -> ExpressionRef {
-    let call_operands = vec![make_int_32(module, x)];
-    module.call("check", call_operands, Type::none())
-}
-#[test]
-pub fn test_relooper() {
-    let mut module = Module::new();
-
-    module.add_function_import("check", "module", "check", Type::int_32(), Type::none());
-
-    {
-        // trivial: just one block
-        let local_types = vec![Type::int_32()];
-
-        let mut relooper = module.make_relooper();
-        let block = relooper.add_block(make_call_check(&mut module, 1337));
-        let body = relooper.render_and_dispose(block, 0);
-        let sinker = module.add_function("just-one-block", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // two blocks
-        let local_types = vec![Type::int_32()];
-
-        let mut relooper = module.make_relooper();
-        let block0 = relooper.add_block(make_call_check(&mut module, 0));
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        BRelooperRef::add_branch(&block0, &block1, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-
-        let body = relooper.render_and_dispose(block0, 0);
-        let sinker = module.add_function("two-block", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // two blocks with code between them
-        let local_types = vec![Type::int_32()];
-
-        let mut relooper = module.make_relooper();
-        let block0 = relooper.add_block(make_call_check(&mut module, 0));
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        BRelooperRef::add_branch(&block0, &block1, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, 77));
-
-        let body = relooper.render_and_dispose(block0, 0);
-        let sinker = module.add_function("two-block-plus-code", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // two blocks in  a loop
-        let local_types = vec![Type::int_32()];
-
-        let mut relooper = module.make_relooper();
-        let block0 = relooper.add_block(make_call_check(&mut module, 0));
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        BRelooperRef::add_branch(&block0, &block1, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block1, &block0, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        let body = relooper.render_and_dispose(block0, 0);
-        let sinker = module.add_function("loop", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // two blocks in  a loop with codes
-        let local_types = vec![Type::int_32()];
-
-        let mut relooper = module.make_relooper();
-        let block0 = relooper.add_block(make_call_check(&mut module, 0));
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        BRelooperRef::add_branch(&block0, &block1, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, 33));
-        BRelooperRef::add_branch(&block1, &block0, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, -66));
-        let body = relooper.render_and_dispose(block0, 0);
-        let sinker = module.add_function("loop-plus-code", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // split
-        let local_types = vec![Type::int_32()];
-
-        let mut relooper = module.make_relooper();
-        let block0 = relooper.add_block(make_call_check(&mut module, 0));
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        let block2 = relooper.add_block(make_call_check(&mut module, 2));
-        BRelooperRef::add_branch(&block0, &block1, make_int_32(&mut module, 55), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block0, &block2, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-
-        let body = relooper.render_and_dispose(block0, 0);
-        let sinker = module.add_function("split", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // split + code
-        let local_types = vec![Type::int_32()];
-
-        let mut relooper = module.make_relooper();
-        let block0 = relooper.add_block(make_call_check(&mut module, 0));
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        let block2 = relooper.add_block(make_call_check(&mut module, 2));
-        let temp = make_dropped_int_32(&mut module, 10);
-        BRelooperRef::add_branch(&block0, &block1, make_int_32(&mut module, 55), temp);
-        BRelooperRef::add_branch(&block0, &block2, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, 20));
-
-        let body = relooper.render_and_dispose(block0, 0);
-        let sinker = module.add_function("split-plus-code", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // if + code
-        let local_types = vec![Type::int_32()];
-
-        let mut relooper = module.make_relooper();
-        let block0 = relooper.add_block(make_call_check(&mut module, 0));
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        let block2 = relooper.add_block(make_call_check(&mut module, 2));
-        let temp = make_dropped_int_32(&mut module, -1);
-        BRelooperRef::add_branch(&block0, &block1, make_int_32(&mut module, 55), temp);
-        BRelooperRef::add_branch(&block0, &block2, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, -2));
-        BRelooperRef::add_branch(&block1, &block2, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, -3));
-        let body = relooper.render_and_dispose(block0, 0);
-        let sinker = module.add_function("if-plus-code", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // if
-        let local_types = vec![Type::int_32()];
-
-        let mut relooper = module.make_relooper();
-        let block0 = relooper.add_block(make_call_check(&mut module, 0));
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        let block2 = relooper.add_block(make_call_check(&mut module, 2));
-        BRelooperRef::add_branch(&block0, &block1, make_int_32(&mut module, 55), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block0, &block2, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block1, &block2, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        let body = relooper.render_and_dispose(block0, 0);
-        let sinker = module.add_function("if", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // if-else
-        let local_types = vec![Type::int_32()];
-
-        let mut relooper = module.make_relooper();
-        let block0 = relooper.add_block(make_call_check(&mut module, 0));
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        let block2 = relooper.add_block(make_call_check(&mut module, 2));
-        let block3 = relooper.add_block(make_call_check(&mut module, 3));
-
-        BRelooperRef::add_branch(&block0, &block1, make_int_32(&mut module, 55), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block0, &block2, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block1, &block3, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block2, &block3, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        let body = relooper.render_and_dispose(block0, 0);
-        let sinker = module.add_function("if-else", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // loop+tail
-        let local_types = vec![Type::int_32()];
-        let mut relooper = module.make_relooper();
-        let block0 = relooper.add_block(make_call_check(&mut module, 0));
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        let block2 = relooper.add_block(make_call_check(&mut module, 2));
-        BRelooperRef::add_branch(&block0, &block1, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block1, &block0, make_int_32(&mut module, 10), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block1, &block2, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        let body = relooper.render_and_dispose(block0, 0);
-        let snker = module.add_function("loop-tail", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // nontrivial loop + phi to head
-        let local_types = vec![Type::int_32()];
-        let mut relooper = module.make_relooper();
-        let block0 = relooper.add_block(make_call_check(&mut module, 0));
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        let block2 = relooper.add_block(make_call_check(&mut module, 2));
-        let block3 = relooper.add_block(make_call_check(&mut module, 3));
-        let block4 = relooper.add_block(make_call_check(&mut module, 4));
-        let block5 = relooper.add_block(make_call_check(&mut module, 5));
-        let block6 = relooper.add_block(make_call_check(&mut module, 6));
-        BRelooperRef::add_branch(&block0, &block1, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, 10));
-        BRelooperRef::add_branch(&block1, &block2, make_int_32(&mut module, -2), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block1, &block6, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, 20));
-        BRelooperRef::add_branch(&block2, &block3, make_int_32(&mut module, -6), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block2, &block1, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, 30));
-        BRelooperRef::add_branch(&block3, &block4, make_int_32(&mut module, -10), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block3, &block5, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block4, &block5, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block5, &block6, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, 40));
-        let body = relooper.render_and_dispose(block0, 0);
-        let sinker = module.add_function("non-trivial-loop-plus-phi-to-head", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // switch
-        let local_types = vec![Type::int_32()];
-        let mut relooper = module.make_relooper();
-        let temp = make_int_32(&mut module, -99);
-        let block0 = relooper.add_block_with_switch(make_call_check(&mut module, 0), temp);
-        // TODO: this example is not very good, the blocks should end in a |return| as otherwise they
-        //       fall through to each other. A relooper should end in something that stops control
-        //       flow, if it doesn't have branches going out
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        let block2 = relooper.add_block(make_call_check(&mut module, 2));
-        let block3 = relooper.add_block(make_call_check(&mut module, 3));
-        let to_block1 = vec![2, 5];
-        BRelooperRef::add_branch_for_switch(&block0, &block1, to_block1, ExpressionRef::null_expr());
-        let to_block2 = vec![4];
-        BRelooperRef::add_branch_for_switch(&block0, &block2, to_block2, make_dropped_int_32(&mut module, 55));
-        BRelooperRef::add_branch_for_switch(&block0, &block3, vec![], ExpressionRef::null_expr());
-        let body = relooper.render_and_dispose(block0, 0);
-        let sinker = module.add_function("switch", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        // duff's device
-        let local_types = vec![Type::int_32(), Type::int_32(), Type::int_64(), Type::int_32(), Type::float_32(), Type::float_64(), Type::int_32()];
-        let mut relooper = module.make_relooper();
-        let block0 = relooper.add_block(make_call_check(&mut module, 0));
-        let block1 = relooper.add_block(make_call_check(&mut module, 1));
-        let block2 = relooper.add_block(make_call_check(&mut module, 2));
-        BRelooperRef::add_branch(&block0, &block1, make_int_32(&mut module, 10), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block0, &block2, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block1, &block2, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        BRelooperRef::add_branch(&block2, &block1, ExpressionRef::null_expr(), ExpressionRef::null_expr());
-        let body = relooper.render_and_dispose(block0, 3); // use $3 as the helper var
-        let sinker = module.add_function("duffs-device", Type::none(), Type::none(), local_types, body);
-    }
-    {
-        //return in a block
-        let local_types = vec![Type::int_32()];
-
-        let mut relooper = module.make_relooper();
-        let ret = make_int_32(&mut module, 1337);
-        let list_list = vec![make_call_check(&mut module, 42), module.r#return(ret)];
-        let list = module.new_block("the-lst", list_list, Type::none());
-        let block = relooper.add_block(list);
-        let body = relooper.render_and_dispose(block, 0);
-        let sinker = module.add_function("return", Type::none(), Type::int_32(), local_types, body);
+        assert!(module.validate());
+        //Module is implicitly droped here v (see `module.drop`)
+    } // <--------------------------------/
+    #[test]
+    pub fn test_unreachable() {
+        let mut module = Module::new();
+        let unr = module.unreachable();
+        let body = module.call_indirect(unr, vec![], Type::none(), Type::int_64());
+        let fn_ = module.add_function("unreachable-fn", Type::none(), Type::none(), vec![], body);
+        assert!(module.validate());
+        module.print();
+        //Module is implicitly disposed
     }
 
-    println!("raw:");
-    module.print();
-    assert!(module.validate())
-    // assert!(module.validate());
-}
-//TODO: Test binaries
-// #[test]
-// pub fn test_binaryes() {
-//     let mut module = Module::new();
+    pub fn make_call_check(module: &mut Module, x: i32) -> ExpressionRef {
+        let call_operands = vec![make_int_32(module, x)];
+        module.call("check", call_operands, Type::none())
+    }
+    #[test]
+    pub fn test_relooper() {
+        let mut module = Module::new();
 
-//     let buffer = {
-//         let ii = Type::create(vec![Type::int_32(), Type::int_32()]);
-//         let x = module.get_local(0, Type::int_32());
-//         let y = module.get_local(1, Type::int_32());
-//         let add = module.binary(Op::add_int32(), x, y);
-//         let adder = module.add_function("adder", ii, Type::int_32(), vec![], add);
-//         //TODO BinaryenSetDebugInfo
-//         // module.compile()
-//         ""
-//     };
-//     let size = buffer.len();
-//     let compiled = module.compile();
-//     println!("size = {:?}\ncompiled = {:?}", compiled.len(), compiled);
-//     // std::fs::write("compiled_test", module.compile()).unwrap();
-//     module.print();
-//     assert!(size > 0);
-//     assert!(size < 512);
-// }
+        module.add_function_import("check", "module", "check", Type::int_32(), Type::none());
 
-fn main() {
-    println!("You should run with `cargo test` from command line, not `cargo run` :)");
-}
+        {
+            // trivial: just one block
+            let local_types = vec![Type::int_32()];
 
+            let mut relooper = module.make_relooper();
+            let block = relooper.add_block(make_call_check(&mut module, 1337));
+            let body = relooper.render_and_dispose(block, 0);
+            let sinker = module.add_function(
+                "just-one-block",
+                Type::none(),
+                Type::none(),
+                local_types,
+                body,
+            );
+        }
+        {
+            // two blocks
+            let local_types = vec![Type::int_32()];
+
+            let mut relooper = module.make_relooper();
+            let block0 = relooper.add_block(make_call_check(&mut module, 0));
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            BRelooperRef::add_branch(
+                &block0,
+                &block1,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+
+            let body = relooper.render_and_dispose(block0, 0);
+            let sinker =
+                module.add_function("two-block", Type::none(), Type::none(), local_types, body);
+        }
+        {
+            // two blocks with code between them
+            let local_types = vec![Type::int_32()];
+
+            let mut relooper = module.make_relooper();
+            let block0 = relooper.add_block(make_call_check(&mut module, 0));
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            BRelooperRef::add_branch(
+                &block0,
+                &block1,
+                ExpressionRef::null_expr(),
+                make_dropped_int_32(&mut module, 77),
+            );
+
+            let body = relooper.render_and_dispose(block0, 0);
+            let sinker = module.add_function(
+                "two-block-plus-code",
+                Type::none(),
+                Type::none(),
+                local_types,
+                body,
+            );
+        }
+        {
+            // two blocks in  a loop
+            let local_types = vec![Type::int_32()];
+
+            let mut relooper = module.make_relooper();
+            let block0 = relooper.add_block(make_call_check(&mut module, 0));
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            BRelooperRef::add_branch(
+                &block0,
+                &block1,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block1,
+                &block0,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            let body = relooper.render_and_dispose(block0, 0);
+            let sinker = module.add_function("loop", Type::none(), Type::none(), local_types, body);
+        }
+        {
+            // two blocks in  a loop with codes
+            let local_types = vec![Type::int_32()];
+
+            let mut relooper = module.make_relooper();
+            let block0 = relooper.add_block(make_call_check(&mut module, 0));
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            BRelooperRef::add_branch(
+                &block0,
+                &block1,
+                ExpressionRef::null_expr(),
+                make_dropped_int_32(&mut module, 33),
+            );
+            BRelooperRef::add_branch(
+                &block1,
+                &block0,
+                ExpressionRef::null_expr(),
+                make_dropped_int_32(&mut module, -66),
+            );
+            let body = relooper.render_and_dispose(block0, 0);
+            let sinker = module.add_function(
+                "loop-plus-code",
+                Type::none(),
+                Type::none(),
+                local_types,
+                body,
+            );
+        }
+        {
+            // split
+            let local_types = vec![Type::int_32()];
+
+            let mut relooper = module.make_relooper();
+            let block0 = relooper.add_block(make_call_check(&mut module, 0));
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            let block2 = relooper.add_block(make_call_check(&mut module, 2));
+            BRelooperRef::add_branch(
+                &block0,
+                &block1,
+                make_int_32(&mut module, 55),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block0,
+                &block2,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+
+            let body = relooper.render_and_dispose(block0, 0);
+            let sinker =
+                module.add_function("split", Type::none(), Type::none(), local_types, body);
+        }
+        {
+            // split + code
+            let local_types = vec![Type::int_32()];
+
+            let mut relooper = module.make_relooper();
+            let block0 = relooper.add_block(make_call_check(&mut module, 0));
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            let block2 = relooper.add_block(make_call_check(&mut module, 2));
+            let temp = make_dropped_int_32(&mut module, 10);
+            BRelooperRef::add_branch(&block0, &block1, make_int_32(&mut module, 55), temp);
+            BRelooperRef::add_branch(
+                &block0,
+                &block2,
+                ExpressionRef::null_expr(),
+                make_dropped_int_32(&mut module, 20),
+            );
+
+            let body = relooper.render_and_dispose(block0, 0);
+            let sinker = module.add_function(
+                "split-plus-code",
+                Type::none(),
+                Type::none(),
+                local_types,
+                body,
+            );
+        }
+        {
+            // if + code
+            let local_types = vec![Type::int_32()];
+
+            let mut relooper = module.make_relooper();
+            let block0 = relooper.add_block(make_call_check(&mut module, 0));
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            let block2 = relooper.add_block(make_call_check(&mut module, 2));
+            let temp = make_dropped_int_32(&mut module, -1);
+            BRelooperRef::add_branch(&block0, &block1, make_int_32(&mut module, 55), temp);
+            BRelooperRef::add_branch(
+                &block0,
+                &block2,
+                ExpressionRef::null_expr(),
+                make_dropped_int_32(&mut module, -2),
+            );
+            BRelooperRef::add_branch(
+                &block1,
+                &block2,
+                ExpressionRef::null_expr(),
+                make_dropped_int_32(&mut module, -3),
+            );
+            let body = relooper.render_and_dispose(block0, 0);
+            let sinker = module.add_function(
+                "if-plus-code",
+                Type::none(),
+                Type::none(),
+                local_types,
+                body,
+            );
+        }
+        {
+            // if
+            let local_types = vec![Type::int_32()];
+
+            let mut relooper = module.make_relooper();
+            let block0 = relooper.add_block(make_call_check(&mut module, 0));
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            let block2 = relooper.add_block(make_call_check(&mut module, 2));
+            BRelooperRef::add_branch(
+                &block0,
+                &block1,
+                make_int_32(&mut module, 55),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block0,
+                &block2,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block1,
+                &block2,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            let body = relooper.render_and_dispose(block0, 0);
+            let sinker = module.add_function("if", Type::none(), Type::none(), local_types, body);
+        }
+        {
+            // if-else
+            let local_types = vec![Type::int_32()];
+
+            let mut relooper = module.make_relooper();
+            let block0 = relooper.add_block(make_call_check(&mut module, 0));
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            let block2 = relooper.add_block(make_call_check(&mut module, 2));
+            let block3 = relooper.add_block(make_call_check(&mut module, 3));
+
+            BRelooperRef::add_branch(
+                &block0,
+                &block1,
+                make_int_32(&mut module, 55),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block0,
+                &block2,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block1,
+                &block3,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block2,
+                &block3,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            let body = relooper.render_and_dispose(block0, 0);
+            let sinker =
+                module.add_function("if-else", Type::none(), Type::none(), local_types, body);
+        }
+        {
+            // loop+tail
+            let local_types = vec![Type::int_32()];
+            let mut relooper = module.make_relooper();
+            let block0 = relooper.add_block(make_call_check(&mut module, 0));
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            let block2 = relooper.add_block(make_call_check(&mut module, 2));
+            BRelooperRef::add_branch(
+                &block0,
+                &block1,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block1,
+                &block0,
+                make_int_32(&mut module, 10),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block1,
+                &block2,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            let body = relooper.render_and_dispose(block0, 0);
+            let snker =
+                module.add_function("loop-tail", Type::none(), Type::none(), local_types, body);
+        }
+        {
+            // nontrivial loop + phi to head
+            let local_types = vec![Type::int_32()];
+            let mut relooper = module.make_relooper();
+            let block0 = relooper.add_block(make_call_check(&mut module, 0));
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            let block2 = relooper.add_block(make_call_check(&mut module, 2));
+            let block3 = relooper.add_block(make_call_check(&mut module, 3));
+            let block4 = relooper.add_block(make_call_check(&mut module, 4));
+            let block5 = relooper.add_block(make_call_check(&mut module, 5));
+            let block6 = relooper.add_block(make_call_check(&mut module, 6));
+            BRelooperRef::add_branch(
+                &block0,
+                &block1,
+                ExpressionRef::null_expr(),
+                make_dropped_int_32(&mut module, 10),
+            );
+            BRelooperRef::add_branch(
+                &block1,
+                &block2,
+                make_int_32(&mut module, -2),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block1,
+                &block6,
+                ExpressionRef::null_expr(),
+                make_dropped_int_32(&mut module, 20),
+            );
+            BRelooperRef::add_branch(
+                &block2,
+                &block3,
+                make_int_32(&mut module, -6),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block2,
+                &block1,
+                ExpressionRef::null_expr(),
+                make_dropped_int_32(&mut module, 30),
+            );
+            BRelooperRef::add_branch(
+                &block3,
+                &block4,
+                make_int_32(&mut module, -10),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block3,
+                &block5,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block4,
+                &block5,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block5,
+                &block6,
+                ExpressionRef::null_expr(),
+                make_dropped_int_32(&mut module, 40),
+            );
+            let body = relooper.render_and_dispose(block0, 0);
+            let sinker = module.add_function(
+                "non-trivial-loop-plus-phi-to-head",
+                Type::none(),
+                Type::none(),
+                local_types,
+                body,
+            );
+        }
+        {
+            // switch
+            let local_types = vec![Type::int_32()];
+            let mut relooper = module.make_relooper();
+            let temp = make_int_32(&mut module, -99);
+            let block0 = relooper.add_block_with_switch(make_call_check(&mut module, 0), temp);
+            // TODO: this example is not very good, the blocks should end in a |return| as otherwise they
+            //       fall through to each other. A relooper should end in something that stops control
+            //       flow, if it doesn't have branches going out
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            let block2 = relooper.add_block(make_call_check(&mut module, 2));
+            let block3 = relooper.add_block(make_call_check(&mut module, 3));
+            let to_block1 = vec![2, 5];
+            BRelooperRef::add_branch_for_switch(
+                &block0,
+                &block1,
+                to_block1,
+                ExpressionRef::null_expr(),
+            );
+            let to_block2 = vec![4];
+            BRelooperRef::add_branch_for_switch(
+                &block0,
+                &block2,
+                to_block2,
+                make_dropped_int_32(&mut module, 55),
+            );
+            BRelooperRef::add_branch_for_switch(
+                &block0,
+                &block3,
+                vec![],
+                ExpressionRef::null_expr(),
+            );
+            let body = relooper.render_and_dispose(block0, 0);
+            let sinker =
+                module.add_function("switch", Type::none(), Type::none(), local_types, body);
+        }
+        {
+            // duff's device
+            let local_types = vec![
+                Type::int_32(),
+                Type::int_32(),
+                Type::int_64(),
+                Type::int_32(),
+                Type::float_32(),
+                Type::float_64(),
+                Type::int_32(),
+            ];
+            let mut relooper = module.make_relooper();
+            let block0 = relooper.add_block(make_call_check(&mut module, 0));
+            let block1 = relooper.add_block(make_call_check(&mut module, 1));
+            let block2 = relooper.add_block(make_call_check(&mut module, 2));
+            BRelooperRef::add_branch(
+                &block0,
+                &block1,
+                make_int_32(&mut module, 10),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block0,
+                &block2,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block1,
+                &block2,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            BRelooperRef::add_branch(
+                &block2,
+                &block1,
+                ExpressionRef::null_expr(),
+                ExpressionRef::null_expr(),
+            );
+            let body = relooper.render_and_dispose(block0, 3); // use $3 as the helper var
+            let sinker = module.add_function(
+                "duffs-device",
+                Type::none(),
+                Type::none(),
+                local_types,
+                body,
+            );
+        }
+        {
+            //return in a block
+            let local_types = vec![Type::int_32()];
+
+            let mut relooper = module.make_relooper();
+            let ret = make_int_32(&mut module, 1337);
+            let list_list = vec![make_call_check(&mut module, 42), module.r#return(ret)];
+            let list = module.new_block("the-lst", list_list, Type::none());
+            let block = relooper.add_block(list);
+            let body = relooper.render_and_dispose(block, 0);
+            let sinker =
+                module.add_function("return", Type::none(), Type::int_32(), local_types, body);
+        }
+
+        println!("raw:");
+        module.print();
+        assert!(module.validate())
+        // assert!(module.validate());
+    }
+    //TODO: Test binaries
+    // #[test]
+    // pub fn test_binaryes() {
+    //     let mut module = Module::new();
+
+    //     let buffer = {
+    //         let ii = Type::create(vec![Type::int_32(), Type::int_32()]);
+    //         let x = module.get_local(0, Type::int_32());
+    //         let y = module.get_local(1, Type::int_32());
+    //         let add = module.binary(Op::add_int32(), x, y);
+    //         let adder = module.add_function("adder", ii, Type::int_32(), vec![], add);
+    //         //TODO BinaryenSetDebugInfo
+    //         // module.compile()
+    //         ""
+    //     };
+    //     let size = buffer.len();
+    //     let compiled = module.compile();
+    //     println!("size = {:?}\ncompiled = {:?}", compiled.len(), compiled);
+    //     // std::fs::write("compiled_test", module.compile()).unwrap();
+    //     module.print();
+    //     assert!(size > 0);
+    //     assert!(size < 512);
+    // }
+
+    fn main() {
+        println!("You should run with `cargo test` from command line, not `cargo run` :)");
+    }
 }
