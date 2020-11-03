@@ -50,7 +50,7 @@ macro_rules! binop {
 }
 impl Op {
     pub fn new(op: BinaryenOp) -> Self {
-        return Self { inner: op };
+Self { inner: op }
     }
     // Potentially use macros for this?
 
@@ -509,7 +509,7 @@ pub struct ExpressionRef {
 }
 impl ExpressionRef {
     pub fn new(expr: BinaryenExpressionRef) -> Self {
-        return ExpressionRef { inner: expr };
+ExpressionRef { inner: expr }
     }
     pub fn null_expr() -> ExpressionRef {
         Self::new(std::ptr::null_mut::<BinaryenExpression>())
@@ -524,7 +524,7 @@ pub struct Export {
 }
 impl Export {
     fn new(expr: *mut BinaryenExport) -> Self {
-        return Self { inner: expr };
+Self { inner: expr }
     }
 }
 unsafe impl Send for Export {}
@@ -611,11 +611,11 @@ impl Module {
     }
     /// Bool whether the validation was successful
     pub fn validate(&mut self) -> bool {
-        return unsafe { BinaryenModuleValidate(self.inner) == 1 };
+unsafe { BinaryenModuleValidate(self.inner) == 1 }
     }
     /// Incase you want to have the raw validation number.
     pub fn validate_i(&mut self) -> i32 {
-        return unsafe { BinaryenModuleValidate(self.inner) };
+unsafe { BinaryenModuleValidate(self.inner) }
     }
     /// Optimise
     pub fn optimize(&mut self) {
@@ -742,7 +742,7 @@ impl Module {
     }
     pub fn compile(&mut self) -> &str {
         let c = unsafe {
-            let was_color_originally_enabled = BinaryenAreColorsEnabled();
+            let _was_color_originally_enabled = BinaryenAreColorsEnabled();
             let c = BinaryenModuleAllocateAndWrite(self.inner, std::ptr::null());
             println!("c: {:?}\n", c);
             println!("{:?}", 0x7f7afc00bde0 as *const i8);
@@ -1308,7 +1308,7 @@ impl Module {
         initial: u32,
         maximum: u32,
         export_name: &str,
-        mut segments: Vec<&str>,
+        segments: Vec<&str>,
         mut segment_passive: Vec<i8>,
         segment_offsets: Vec<ExpressionRef>,
         mut segment_sizes: Vec<u32>,
@@ -1446,6 +1446,7 @@ impl BRelooperRef {
         }
     }
 }
+#[allow(dead_code)]
 pub struct GlobalRef {
     inner: BinaryenGlobalRef,
 }
@@ -1479,7 +1480,7 @@ pub struct Type {
 impl Type {
     pub fn neg() -> Self {
         return Self {
-            inner: { unsafe { usize::MAX } },
+            inner: {  usize::MAX },
             matchable_type: MType::Neg,
         };
     }
@@ -1974,7 +1975,7 @@ mod tests {
             let b = module.br_on_exn("try-block", "a-event", lg);
             let try_children = vec![module.rethrow(b)];
             let try_blk = module.new_block("try-block", try_children, Type::int_32());
-            let mut children = vec![module.set_local(5, popped), module.drop_var(try_blk)];
+            let children = vec![module.set_local(5, popped), module.drop_var(try_blk)];
 
             let catch_body = module.new_nameless_block(children, Type::none());
             catch_body
