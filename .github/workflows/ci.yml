@@ -34,7 +34,6 @@ jobs:
         run: choco install ninja
         if: matrix.os == 'windows-latest'
 
-        
       # You may want to test other featuresets here...
       - run: cargo test --verbose --workspace --all-features
       - run: cargo test --verbose --workspace --no-default-features
