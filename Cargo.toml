@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 binars-sys = {git = "https://github.com/accusitive/binars-sys"}
+lazy_static = "1.4.0"
