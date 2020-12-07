@@ -8,10 +8,10 @@ use std::{convert::TryInto, ffi::CString};
 #[cfg(test)]
 #[macro_use]
 extern crate lazy_static;
-pub mod raw
-{
-    pub use binars_sys::*;
-}
+// pub mod raw
+// {
+    pub use binars_sys as sys;
+// }
 pub struct Literal
 {
     inner: BinaryenLiteral,
@@ -656,10 +656,11 @@ impl Module
             .iter()
             .map(|t| t.inner)
             .collect::<Vec<BinaryenType>>();
+            let cs = CString::new(name).unwrap();
         FunctionRef::new(unsafe {
             BinaryenAddFunction(
                 self.inner,
-                CString::new(name).unwrap().as_ptr(),
+                cs.as_ptr(),
                 params.inner,
                 results.inner,
                 inners.as_mut_ptr(),
@@ -743,10 +744,11 @@ impl Module
             .iter()
             .map(|t| t.inner)
             .collect::<Vec<BinaryenExpressionRef>>();
+            let cs = CString::new(name).unwrap();
         ExpressionRef::new(unsafe {
             BinaryenBlock(
                 self.inner,
-                CString::new(name).unwrap().as_ptr(),
+                cs.as_ptr(),
                 inners.as_mut_ptr(),
                 inners.len().try_into().unwrap(),
                 type_.inner,
@@ -783,21 +785,21 @@ impl Module
     /// Add an export to a table
     pub fn add_table_export(&mut self, internal_name: &str, external_name: &str) -> Export
     {
-        let c_internal_name = CString::new(internal_name).unwrap().as_ptr();
-        let c_external_name = CString::new(external_name).unwrap().as_ptr();
+        let c_internal_name = CString::new(internal_name).unwrap();
+        let c_external_name = CString::new(external_name).unwrap();
 
         return Export::new(unsafe {
-            BinaryenAddTableExport(self.inner, c_internal_name, c_external_name)
+            BinaryenAddTableExport(self.inner, c_internal_name.as_ptr(), c_external_name.as_ptr())
         });
     }
     /// Add an export to a memory.
     pub fn add_memory_export(&mut self, internal_name: &str, external_name: &str) -> Export
     {
-        let c_internal_name = CString::new(internal_name).unwrap().as_ptr();
-        let c_external_name = CString::new(external_name).unwrap().as_ptr();
+        let c_internal_name = CString::new(internal_name).unwrap();
+        let c_external_name = CString::new(external_name).unwrap();
 
         return Export::new(unsafe {
-            BinaryenAddMemoryExport(self.inner, c_internal_name, c_external_name)
+            BinaryenAddMemoryExport(self.inner, c_internal_name.as_ptr(), c_external_name.as_ptr())
         });
     }
 
@@ -1022,10 +1024,11 @@ impl Module
     }
     pub fn r#loop(&mut self, ins: &str, body: ExpressionRef) -> ExpressionRef
     {
+        let cs = CString::new(ins).unwrap();
         unsafe {
             ExpressionRef::new(BinaryenLoop(
                 self.inner,
-                CString::new(ins).unwrap().as_ptr(),
+                cs.as_ptr(),
                 body.inner,
             ))
         }
@@ -1078,14 +1081,15 @@ impl Module
     {
         let mut cnames = names
             .iter()
-            .map(|&n| CString::new(n).unwrap().as_ptr())
+            .map(|&n| {let cs = CString::new(n).unwrap(); cs.as_ptr()})
             .collect::<Vec<*const std::os::raw::c_char>>();
+            let default_cs = CString::new(default_name).unwrap();
         ExpressionRef::new(unsafe {
             BinaryenSwitch(
                 self.inner,
                 cnames.as_mut_ptr(),
                 cnames.len().try_into().unwrap(),
-                CString::new(default_name).unwrap().as_ptr(),
+                default_cs.as_ptr(),
                 condition.inner,
                 value.inner,
             )
@@ -1102,11 +1106,11 @@ impl Module
             .iter()
             .map(|o| o.inner)
             .collect::<Vec<BinaryenExpressionRef>>();
-
+        let cs = CString::new(target).unwrap();
         ExpressionRef::new(unsafe {
             BinaryenCall(
                 self.inner,
-                CString::new(target).unwrap().as_ptr(),
+                cs.as_ptr(),
                 inners.as_mut_ptr(),
                 operands.len().try_into().unwrap(),
                 return_type.inner,
@@ -2138,6 +2142,7 @@ mod jtests
             make_int_64(&mut module, 111),
         );
         let externrefExpr = module.ref_null(Type::externref());
+        #[allow(unused_assignments)]
         let mut funcrefExpr = module.ref_null(Type::funcref());
         funcrefExpr = module.ref_func("kitchen()sinker");
         let exnref = module.ref_null(Type::exnref());
@@ -2209,7 +2214,7 @@ mod jtests
                 make_unary(&mut module, Op::$name(), $type)
             };
         }
-        let mut value_list = vec![
+        let value_list = vec![
             unop!(clz_int32, i32_),
             unop!(ctz_int32, i32_),
             // //TODO: Fill the rest of the operators in
@@ -2998,7 +3003,14 @@ mod jtests
         // ^ Module s-expr printed (in memory, caller-owned)
         // free(text) and BinaryenModuleDispose(module) is implicit here v
     } // <----------------------------------------------------------------
-
+    #[test]
+    pub fn test_bad_string_ptr() {
+        let mut module = Module::new();
+        {
+            module.add_table_export("internal", "external");
+        }
+        module.print();
+    }
     fn main()
     {
         println!("You should run with `cargo test` from command line, not `cargo run` :)");

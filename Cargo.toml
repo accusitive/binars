@@ -10,3 +10,12 @@ edition = "2018"
 
 binars-sys = {git = "https://github.com/accusitive/binars-sys"}
 lazy_static = "1.4.0"
+[[example]]
+name = "make_and_print"
+path = "examples/make_and_print/src/main.rs"
+[[example]]
+name = "basic_function"
+path = "examples/basic_function/src/main.rs"
+[[example]]
+name = "reusable_function"
+path = "examples/reusable_function/src/main.rs"

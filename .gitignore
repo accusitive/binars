@@ -1,2 +1,5 @@
 /target
 Cargo.lock
+/examples/make_and_print/target
+/examples/basic_function/target
+/examples/reusable_function/target
