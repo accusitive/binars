@@ -1,0 +1,359 @@
+warning: unneeded `return` statement
+   --> src/lib.rs:792:9
+    |
+792 | /         return Export::new(unsafe {
+793 | |             BinaryenAddFunctionExport(
+794 | |                 self.inner,
+795 | |                 c_internal_name.as_ptr(),
+796 | |                 c_external_name.as_ptr(),
+797 | |             )
+798 | |         });
+    | |___________^
+    |
+    = note: `#[warn(clippy::needless_return)]` on by default
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+    |
+792 |         Export::new(unsafe {
+793 |             BinaryenAddFunctionExport(
+794 |                 self.inner,
+795 |                 c_internal_name.as_ptr(),
+796 |                 c_external_name.as_ptr(),
+797 |             )
+  ...
+
+warning: casting integer literal to `i8` is unnecessary
+   --> src/lib.rs:838:28
+    |
+838 |         let mut raw = vec![0 as i8; len.try_into().unwrap()];
+    |                            ^^^^^^^ help: try: `0_i8`
+    |
+    = note: `#[warn(clippy::unnecessary_cast)]` on by default
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unnecessary_cast
+
+warning: returning the result of a `let` binding from a block
+   --> src/lib.rs:849:13
+    |
+844 | /             let content = Vec::from_raw_parts(
+845 | |                 mp as *mut u8,
+846 | |                 size.try_into().unwrap(),
+847 | |                 size.try_into().unwrap(),
+848 | |             );
+    | |______________- unnecessary `let` binding
+849 |               content
+    |               ^^^^^^^
+    |
+    = note: `#[warn(clippy::let_and_return)]` on by default
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#let_and_return
+help: return the expression directly
+    |
+844 |
+845 |             Vec::from_raw_parts(
+846 |                 mp as *mut u8,
+847 |                 size.try_into().unwrap(),
+848 |                 size.try_into().unwrap(),
+849 |             )
+    |
+
+warning: casting integer literal to `i8` is unnecessary
+   --> src/lib.rs:856:28
+    |
+856 |         let mut raw = vec![0 as i8; len.try_into().unwrap()];
+    |                            ^^^^^^^ help: try: `0_i8`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unnecessary_cast
+
+warning: returning the result of a `let` binding from a block
+   --> src/lib.rs:867:13
+    |
+862 | /             let content = Vec::from_raw_parts(
+863 | |                 mp as *mut u8,
+864 | |                 size.try_into().unwrap(),
+865 | |                 size.try_into().unwrap(),
+866 | |             );
+    | |______________- unnecessary `let` binding
+867 |               content
+    |               ^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#let_and_return
+help: return the expression directly
+    |
+862 |
+863 |             Vec::from_raw_parts(
+864 |                 mp as *mut u8,
+865 |                 size.try_into().unwrap(),
+866 |                 size.try_into().unwrap(),
+867 |             )
+    |
+
+warning: this function has too many arguments (9/7)
+    --> src/lib.rs:1532:5
+     |
+1532 | /     pub fn set_memory(
+1533 | |         &mut self,
+1534 | |         initial: u32,
+1535 | |         maximum: u32,
+...    |
+1542 | |     )
+1543 | |     {
+     | |____^
+     |
+     = note: `#[warn(clippy::too_many_arguments)]` on by default
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#too_many_arguments
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1734:9
+     |
+1734 | /         return Self {
+1735 | |             inner: { usize::MAX },
+1736 | |             matchable_type: MType::Neg,
+1737 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1734 |         Self {
+1735 |             inner: { usize::MAX },
+1736 |             matchable_type: MType::Neg,
+1737 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1741:9
+     |
+1741 | /         return Self {
+1742 | |             inner: { unsafe { BinaryenTypeInt32() } },
+1743 | |             matchable_type: MType::I32,
+1744 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1741 |         Self {
+1742 |             inner: { unsafe { BinaryenTypeInt32() } },
+1743 |             matchable_type: MType::I32,
+1744 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1748:9
+     |
+1748 | /         return Self {
+1749 | |             inner: { unsafe { BinaryenTypeInt64() } },
+1750 | |             matchable_type: MType::I64,
+1751 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1748 |         Self {
+1749 |             inner: { unsafe { BinaryenTypeInt64() } },
+1750 |             matchable_type: MType::I64,
+1751 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1755:9
+     |
+1755 | /         return Self {
+1756 | |             inner: { unsafe { BinaryenTypeFloat32() } },
+1757 | |             matchable_type: MType::F32,
+1758 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1755 |         Self {
+1756 |             inner: { unsafe { BinaryenTypeFloat32() } },
+1757 |             matchable_type: MType::F32,
+1758 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1762:9
+     |
+1762 | /         return Self {
+1763 | |             inner: { unsafe { BinaryenTypeFloat64() } },
+1764 | |             matchable_type: MType::F64,
+1765 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1762 |         Self {
+1763 |             inner: { unsafe { BinaryenTypeFloat64() } },
+1764 |             matchable_type: MType::F64,
+1765 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1769:9
+     |
+1769 | /         return Self {
+1770 | |             inner: { unsafe { BinaryenTypeNone() } },
+1771 | |             matchable_type: MType::None_,
+1772 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1769 |         Self {
+1770 |             inner: { unsafe { BinaryenTypeNone() } },
+1771 |             matchable_type: MType::None_,
+1772 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1776:9
+     |
+1776 | /         return Self {
+1777 | |             inner: { unsafe { BinaryenTypeUnreachable() } },
+1778 | |             matchable_type: MType::Unreachable,
+1779 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1776 |         Self {
+1777 |             inner: { unsafe { BinaryenTypeUnreachable() } },
+1778 |             matchable_type: MType::Unreachable,
+1779 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1783:9
+     |
+1783 | /         return Self {
+1784 | |             inner: { unsafe { BinaryenTypeFuncref() } },
+1785 | |             matchable_type: MType::Funcref,
+1786 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1783 |         Self {
+1784 |             inner: { unsafe { BinaryenTypeFuncref() } },
+1785 |             matchable_type: MType::Funcref,
+1786 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1790:9
+     |
+1790 | /         return Self {
+1791 | |             inner: { unsafe { BinaryenTypeExternref() } },
+1792 | |             matchable_type: MType::Externref,
+1793 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1790 |         Self {
+1791 |             inner: { unsafe { BinaryenTypeExternref() } },
+1792 |             matchable_type: MType::Externref,
+1793 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1797:9
+     |
+1797 | /         return Self {
+1798 | |             inner: { unsafe { BinaryenTypeExnref() } },
+1799 | |             matchable_type: MType::Exnref,
+1800 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1797 |         Self {
+1798 |             inner: { unsafe { BinaryenTypeExnref() } },
+1799 |             matchable_type: MType::Exnref,
+1800 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1804:9
+     |
+1804 | /         return Self {
+1805 | |             inner: { unsafe { BinaryenTypeAuto() } },
+1806 | |             matchable_type: MType::Auto,
+1807 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1804 |         Self {
+1805 |             inner: { unsafe { BinaryenTypeAuto() } },
+1806 |             matchable_type: MType::Auto,
+1807 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1811:9
+     |
+1811 | /         return Self {
+1812 | |             inner: { unsafe { BinaryenTypeI31ref() } },
+1813 | |             matchable_type: MType::I31Ref,
+1814 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1811 |         Self {
+1812 |             inner: { unsafe { BinaryenTypeI31ref() } },
+1813 |             matchable_type: MType::I31Ref,
+1814 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1818:9
+     |
+1818 | /         return Self {
+1819 | |             inner: { unsafe { BinaryenTypeEqref() } },
+1820 | |             matchable_type: MType::EqRef,
+1821 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1818 |         Self {
+1819 |             inner: { unsafe { BinaryenTypeEqref() } },
+1820 |             matchable_type: MType::EqRef,
+1821 |         }
+     |
+
+warning: unneeded `return` statement
+    --> src/lib.rs:1825:9
+     |
+1825 | /         return Self {
+1826 | |             inner: { unsafe { BinaryenTypeVec128() } },
+1827 | |             matchable_type: MType::Vec128,
+1828 | |         };
+     | |__________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_return
+help: remove `return`
+     |
+1825 |         Self {
+1826 |             inner: { unsafe { BinaryenTypeVec128() } },
+1827 |             matchable_type: MType::Vec128,
+1828 |         }
+     |
+
+warning: 20 warnings emitted
+
+    Finished release [optimized] target(s) in 2m 09s
+binars ➤     

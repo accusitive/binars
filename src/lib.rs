@@ -582,16 +582,23 @@ pub struct Module
 }
 unsafe impl Send for Module {}
 unsafe impl Sync for Module {}
+impl Default for Module
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
 impl Module
 {
     /// Create a `Module` from an internal BinaryenModuleRef.
     pub fn new() -> Self
     {
-        return unsafe {
+        unsafe {
             Self {
                 inner: BinaryenModuleCreate(),
             }
-        };
+        }
     }
     /// Print the WAT to the current `Module`.
     pub fn print(&mut self)
@@ -636,14 +643,14 @@ impl Module
     /// Get a reference to a binary expression.
     pub fn binary(&mut self, op: Op, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef
     {
-        return unsafe {
+        unsafe {
             ExpressionRef::new(BinaryenBinary(
                 self.inner,
                 op.inner,
                 left.inner,
                 right.inner,
             ))
-        };
+        }
     }
     /// Add a function to the module.
     pub fn add_function(
@@ -770,13 +777,13 @@ impl Module
     {
         let c_internal_name = CString::new(internal_name.to_string()).unwrap();
         let c_external_name = CString::new(external_name.to_string()).unwrap();
-        return Export::new(unsafe {
+        Export::new(unsafe {
             BinaryenAddExport(
                 self.inner,
                 c_internal_name.as_ptr(),
                 c_external_name.as_ptr(),
             )
-        });
+        })
     }
     /// Add an export to a function in the module.
     pub fn add_function_export(&mut self, internal_name: &str, external_name: &str) -> Export
@@ -784,13 +791,13 @@ impl Module
         let c_internal_name = CString::new(internal_name).unwrap();
         let c_external_name = CString::new(external_name).unwrap();
 
-        return Export::new(unsafe {
+        Export::new(unsafe {
             BinaryenAddFunctionExport(
                 self.inner,
                 c_internal_name.as_ptr(),
                 c_external_name.as_ptr(),
             )
-        });
+        })
     }
     /// Add an export to a table
     pub fn add_table_export(&mut self, internal_name: &str, external_name: &str) -> Export
@@ -798,13 +805,13 @@ impl Module
         let c_internal_name = CString::new(internal_name).unwrap();
         let c_external_name = CString::new(external_name).unwrap();
 
-        return Export::new(unsafe {
+        Export::new(unsafe {
             BinaryenAddTableExport(
                 self.inner,
                 c_internal_name.as_ptr(),
                 c_external_name.as_ptr(),
             )
-        });
+        })
     }
     /// Add an export to a memory.
     pub fn add_memory_export(&mut self, internal_name: &str, external_name: &str) -> Export
@@ -812,13 +819,13 @@ impl Module
         let c_internal_name = CString::new(internal_name).unwrap();
         let c_external_name = CString::new(external_name).unwrap();
 
-        return Export::new(unsafe {
+        Export::new(unsafe {
             BinaryenAddMemoryExport(
                 self.inner,
                 c_internal_name.as_ptr(),
                 c_external_name.as_ptr(),
             )
-        });
+        })
     }
 
     pub fn set_debug_info(&mut self, on: bool)
@@ -827,44 +834,37 @@ impl Module
             BinaryenSetDebugInfo(on as i32);
         }
     }
-    /* TODO: Find a good structure for printing and related
-        Currently, Binaryen gives `BinaryenModuleWrite`, which writes to a `char*`,
-        But I think its nice to have it return a String (or &str) for rust.
-
-    */
 
     pub fn write(&mut self, len: u64) -> String
     {
-        let mut raw = vec![0 as i8; len.try_into().unwrap()];
+        let mut raw = vec![0_i8; len.try_into().unwrap()];
         let mp = raw.as_mut_ptr();
         std::mem::forget(raw);
 
         let content = unsafe {
             let size = BinaryenModuleWrite(self.inner, mp, len);
-            let content = Vec::from_raw_parts(
+            Vec::from_raw_parts(
                 mp as *mut u8,
                 size.try_into().unwrap(),
                 size.try_into().unwrap(),
-            );
-            content
+            )
         };
         unsafe { String::from_utf8_unchecked(content) }
     }
 
     pub fn write_text(&mut self, len: u64) -> String
     {
-        let mut raw = vec![0 as i8; len.try_into().unwrap()];
+        let mut raw = vec![0_i8; len.try_into().unwrap()];
         let mp = raw.as_mut_ptr();
         std::mem::forget(raw);
 
         let content = unsafe {
             let size = BinaryenModuleWriteText(self.inner, mp, len);
-            let content = Vec::from_raw_parts(
+            Vec::from_raw_parts(
                 mp as *mut u8,
                 size.try_into().unwrap(),
                 size.try_into().unwrap(),
-            );
-            content
+            )
         };
         unsafe { String::from_utf8_unchecked(content) }
     }
@@ -1528,7 +1528,7 @@ impl Module
             // }
         }
     }
-    //TODO: More docs on this black box
+    #[allow(clippy::clippy::too_many_arguments)]
     pub fn set_memory(
         &mut self,
         initial: u32,
@@ -1731,105 +1731,105 @@ impl Type
 {
     pub fn neg() -> Self
     {
-        return Self {
+        Self {
             inner: { usize::MAX },
             matchable_type: MType::Neg,
-        };
+        }
     }
     pub fn int_32() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeInt32() } },
             matchable_type: MType::I32,
-        };
+        }
     }
     pub fn int_64() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeInt64() } },
             matchable_type: MType::I64,
-        };
+        }
     }
     pub fn float_32() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeFloat32() } },
             matchable_type: MType::F32,
-        };
+        }
     }
     pub fn float_64() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeFloat64() } },
             matchable_type: MType::F64,
-        };
+        }
     }
     pub fn none() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeNone() } },
             matchable_type: MType::None_,
-        };
+        }
     }
     pub fn unreachable() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeUnreachable() } },
             matchable_type: MType::Unreachable,
-        };
+        }
     }
     pub fn funcref() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeFuncref() } },
             matchable_type: MType::Funcref,
-        };
+        }
     }
     pub fn externref() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeExternref() } },
             matchable_type: MType::Externref,
-        };
+        }
     }
     pub fn exnref() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeExnref() } },
             matchable_type: MType::Exnref,
-        };
+        }
     }
     pub fn auto() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeAuto() } },
             matchable_type: MType::Auto,
-        };
+        }
     }
     pub fn i31ref() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeI31ref() } },
             matchable_type: MType::I31Ref,
-        };
+        }
     }
     pub fn eqref() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeEqref() } },
             matchable_type: MType::EqRef,
-        };
+        }
     }
     pub fn vec128() -> Self
     {
-        return Self {
+        Self {
             inner: { unsafe { BinaryenTypeVec128() } },
             matchable_type: MType::Vec128,
-        };
+        }
     }
     pub fn create(value_types: Vec<Type>) -> Self
     {
-        return unsafe {
+        unsafe {
             let mut inners = value_types
                 .iter()
                 .map(|t| t.inner)
@@ -1841,7 +1841,7 @@ impl Type
                 ),
                 matchable_type: MType::Multi,
             }
-        };
+        }
     }
     pub fn arity(&self) -> u32
     {
