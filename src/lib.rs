@@ -10,7 +10,7 @@ use std::{convert::TryInto, ffi::CString};
 extern crate lazy_static;
 // pub mod raw
 // {
-    pub use binars_sys as sys;
+// pub use binars_sys as sys;
 // }
 pub struct Literal
 {
@@ -611,6 +611,9 @@ impl Module
     /// Get a reference to a local variable.
     pub fn get_local(&mut self, index: i32, dype: Type) -> ExpressionRef
     {
+        if let MType::Auto = dype.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         unsafe {
             ExpressionRef::new(BinaryenLocalGet(
                 self.inner,
@@ -656,7 +659,14 @@ impl Module
             .iter()
             .map(|t| t.inner)
             .collect::<Vec<BinaryenType>>();
-            let cs = CString::new(name).unwrap();
+        let cs = CString::new(name).unwrap();
+
+        if let MType::Auto = params.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
+        if let MType::Auto = results.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         FunctionRef::new(unsafe {
             BinaryenAddFunction(
                 self.inner,
@@ -744,7 +754,7 @@ impl Module
             .iter()
             .map(|t| t.inner)
             .collect::<Vec<BinaryenExpressionRef>>();
-            let cs = CString::new(name).unwrap();
+        let cs = CString::new(name).unwrap();
         ExpressionRef::new(unsafe {
             BinaryenBlock(
                 self.inner,
@@ -789,7 +799,11 @@ impl Module
         let c_external_name = CString::new(external_name).unwrap();
 
         return Export::new(unsafe {
-            BinaryenAddTableExport(self.inner, c_internal_name.as_ptr(), c_external_name.as_ptr())
+            BinaryenAddTableExport(
+                self.inner,
+                c_internal_name.as_ptr(),
+                c_external_name.as_ptr(),
+            )
         });
     }
     /// Add an export to a memory.
@@ -799,7 +813,11 @@ impl Module
         let c_external_name = CString::new(external_name).unwrap();
 
         return Export::new(unsafe {
-            BinaryenAddMemoryExport(self.inner, c_internal_name.as_ptr(), c_external_name.as_ptr())
+            BinaryenAddMemoryExport(
+                self.inner,
+                c_internal_name.as_ptr(),
+                c_external_name.as_ptr(),
+            )
         });
     }
 
@@ -931,6 +949,9 @@ impl Module
     }
     pub fn ref_null(&mut self, type_: Type) -> ExpressionRef
     {
+        if let MType::Auto = type_.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         ExpressionRef::new(unsafe { BinaryenRefNull(self.inner, type_.inner) })
     }
 
@@ -948,6 +969,12 @@ impl Module
     pub fn add_event(&mut self, name: &str, attribute: i32, params: Type, results: Type)
         -> EventRef
     {
+        if let MType::Auto = params.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
+        if let MType::Auto = results.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         EventRef::new(unsafe {
             let cname = CString::new(name).unwrap();
             BinaryenAddEvent(
@@ -978,6 +1005,9 @@ impl Module
     }
     pub fn pop(&mut self, type_: Type) -> ExpressionRef
     {
+        if let MType::Auto = type_.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         ExpressionRef::new(unsafe { BinaryenPop(self.inner, type_.inner) })
     }
     pub fn rethrow(&mut self, exnref: ExpressionRef) -> ExpressionRef
@@ -1025,13 +1055,7 @@ impl Module
     pub fn r#loop(&mut self, ins: &str, body: ExpressionRef) -> ExpressionRef
     {
         let cs = CString::new(ins).unwrap();
-        unsafe {
-            ExpressionRef::new(BinaryenLoop(
-                self.inner,
-                cs.as_ptr(),
-                body.inner,
-            ))
-        }
+        unsafe { ExpressionRef::new(BinaryenLoop(self.inner, cs.as_ptr(), body.inner)) }
     }
 
     pub fn r#break(
@@ -1081,9 +1105,12 @@ impl Module
     {
         let mut cnames = names
             .iter()
-            .map(|&n| {let cs = CString::new(n).unwrap(); cs.as_ptr()})
+            .map(|&n| {
+                let cs = CString::new(n).unwrap();
+                cs.as_ptr()
+            })
             .collect::<Vec<*const std::os::raw::c_char>>();
-            let default_cs = CString::new(default_name).unwrap();
+        let default_cs = CString::new(default_name).unwrap();
         ExpressionRef::new(unsafe {
             BinaryenSwitch(
                 self.inner,
@@ -1107,6 +1134,9 @@ impl Module
             .map(|o| o.inner)
             .collect::<Vec<BinaryenExpressionRef>>();
         let cs = CString::new(target).unwrap();
+        if let MType::Auto = return_type.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         ExpressionRef::new(unsafe {
             BinaryenCall(
                 self.inner,
@@ -1129,7 +1159,12 @@ impl Module
             .iter()
             .map(|o| o.inner)
             .collect::<Vec<BinaryenExpressionRef>>();
-
+        if let MType::Auto = params.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
+        if let MType::Auto = results.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         ExpressionRef::new(unsafe {
             BinaryenCallIndirect(
                 self.inner,
@@ -1143,6 +1178,9 @@ impl Module
     }
     pub fn tee_local(&mut self, index: i32, value: ExpressionRef, type_: Type) -> ExpressionRef
     {
+        if let MType::Auto = type_.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         ExpressionRef::new(unsafe {
             BinaryenLocalTee(self.inner, index as u32, value.inner, type_.inner)
         })
@@ -1157,6 +1195,9 @@ impl Module
         ptr: ExpressionRef,
     ) -> ExpressionRef
     {
+        if let MType::Auto = type_.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         ExpressionRef::new(unsafe {
             BinaryenLoad(
                 self.inner,
@@ -1179,6 +1220,9 @@ impl Module
         type_: Type,
     ) -> ExpressionRef
     {
+        if let MType::Auto = type_.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         ExpressionRef::new(unsafe {
             BinaryenStore(
                 self.inner,
@@ -1199,6 +1243,10 @@ impl Module
         type_: Type,
     ) -> ExpressionRef
     {
+        // TODO: Investigate why this doesn't need to panic
+        // if let MType::Auto = type_.matchable_type {
+        //     panic!("Type `auto` is only available in blocks!")
+        // }
         ExpressionRef::new(unsafe {
             BinaryenSelect(
                 self.inner,
@@ -1224,6 +1272,9 @@ impl Module
             .iter()
             .map(|o| o.inner)
             .collect::<Vec<BinaryenExpressionRef>>();
+        if let MType::Auto = return_type.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         ExpressionRef::new(unsafe {
             let ctarget = CString::new(target).unwrap();
             BinaryenReturnCall(
@@ -1243,6 +1294,12 @@ impl Module
         result_type: Type,
     ) -> ExpressionRef
     {
+        if let MType::Auto = params.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
+        if let MType::Auto = result_type.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         let mut operands_inners = operands
             .iter()
             .map(|o| o.inner)
@@ -1280,6 +1337,9 @@ impl Module
         type_: Type,
     ) -> ExpressionRef
     {
+        if let MType::Auto = type_.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         ExpressionRef::new(unsafe {
             BinaryenAtomicStore(
                 self.inner,
@@ -1299,6 +1359,9 @@ impl Module
         ptr: ExpressionRef,
     ) -> ExpressionRef
     {
+        if let MType::Auto = type_.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         ExpressionRef::new(unsafe {
             BinaryenAtomicLoad(
                 self.inner,
@@ -1317,6 +1380,9 @@ impl Module
         type_: Type,
     ) -> ExpressionRef
     {
+        if let MType::Auto = type_.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         ExpressionRef::new(unsafe {
             BinaryenAtomicWait(
                 self.inner,
@@ -1395,6 +1461,9 @@ impl Module
         init: ExpressionRef,
     ) -> GlobalRef
     {
+        if let MType::Auto = type_.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         GlobalRef::new(unsafe {
             let cname = CString::new(name).unwrap();
             BinaryenAddGlobal(self.inner, cname.as_ptr(), type_.inner, mutable, init.inner)
@@ -1409,6 +1478,12 @@ impl Module
         result: Type,
     )
     {
+        if let MType::Auto = params.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
+        if let MType::Auto = result.matchable_type {
+            panic!("Type `auto` is only available in blocks!")
+        }
         unsafe {
             let c_internal_name = CString::new(internal_name).unwrap();
             let c_external_module_name = CString::new(external_module_name).unwrap();
@@ -1768,7 +1843,7 @@ impl Type
             }
         };
     }
-    pub fn arity(&mut self) -> u32
+    pub fn arity(&self) -> u32
     {
         unsafe { BinaryenTypeArity(self.inner) }
     }
@@ -1967,55 +2042,55 @@ mod jtests
         //TODO like 152 - 158 example
         //TODO: add expanding example
         {
-            let mut unreachable = Type::unreachable();
+            let unreachable = Type::unreachable();
             println!("  // BinaryenTypeUnreachable: {:?}\n", unreachable);
             assert!(unreachable.arity() == 1);
         }
         {
-            let mut i32_ = Type::int_32();
+            let i32_ = Type::int_32();
             println!("  // BinaryenTypeInt32: {:?}\n", i32_);
             assert!(i32_.arity() == 1);
         }
 
         {
-            let mut i64_ = Type::int_64();
+            let i64_ = Type::int_64();
             println!("  // BinaryenTypeInt64: {:?}\n", i64_);
             assert!(i64_.arity() == 1);
         }
         {
-            let mut f32_ = Type::float_32();
+            let f32_ = Type::float_32();
             println!("  // BinaryenTypeFloat32: {:?}", f32_);
             assert!(f32_.arity() == 1);
         }
         {
-            let mut f64_ = Type::float_32();
+            let f64_ = Type::float_32();
             println!("  // BinaryenTypeFloat64: {:?}", f64_);
             assert!(f64_.arity() == 1);
         }
         //TODO: Add v128 test
         {
-            let mut funcref = Type::funcref();
+            let funcref = Type::funcref();
             println!("  // BinaryenTypeFuncref: {:?}", funcref);
             assert!(funcref.arity() == 1);
         }
         {
-            let mut externref = Type::externref();
+            let externref = Type::externref();
             println!("  // BinaryenTypeExternref: {:?}", externref);
             assert!(externref.arity() == 1);
         }
         {
-            let mut exnref = Type::exnref();
+            let exnref = Type::exnref();
             println!("  // BinaryenTypeExnreff: {:?}", exnref);
             assert!(exnref.arity() == 1);
         }
         //TODO Eqref, and i31ref has bindings at line 105 binaryen-c.h, but its not in bindings.rs
         {
-            let mut eqref = Type::eqref();
+            let eqref = Type::eqref();
             println!("  // BinaryenTypeEqref: {:?}\n", eqref);
             assert!(eqref.arity() == 1);
         }
 
-        let mut i31ref = Type::i31ref();
+        let i31ref = Type::i31ref();
         println!("  // BinaryenTypeI31Ref: {:?}\n", i31ref);
         assert!(i31ref.arity() == 1);
 
@@ -2027,7 +2102,7 @@ mod jtests
             let i32_1 = Type::int_32();
 
             let pair = vec![i32_0, i32_1];
-            let mut i32_pair = Type::create(pair.clone());
+            let i32_pair = Type::create(pair.clone());
             assert!(i32_pair.arity() == 2);
             //TODO: expand ln 239
 
@@ -3004,7 +3079,8 @@ mod jtests
         // free(text) and BinaryenModuleDispose(module) is implicit here v
     } // <----------------------------------------------------------------
     #[test]
-    pub fn test_bad_string_ptr() {
+    pub fn test_bad_string_ptr()
+    {
         let mut module = Module::new();
         {
             module.add_table_export("internal", "external");

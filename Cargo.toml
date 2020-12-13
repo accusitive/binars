@@ -7,8 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
+# binaryen-sys = "0.12.0"
 binars-sys = {git = "https://github.com/accusitive/binars-sys"}
+# binars-sys = {path = "../bianrs-sys"}
 lazy_static = "1.4.0"
 [[example]]
 name = "make_and_print"

@@ -1,5 +1,6 @@
 use binars::{ExpressionRef, Module, Op, Type};
-fn math(m: &mut Module, op: Op, ty: Type) -> ExpressionRef {
+fn math(m: &mut Module, op: Op, ty: Type) -> ExpressionRef
+{
     {
         let body = {
             let children = {
@@ -35,7 +36,6 @@ fn main()
             body,
         );
     }
-    
     m.print();
     m.validate();
 }
